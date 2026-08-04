@@ -4,7 +4,7 @@ import imageCompression from "browser-image-compression";
  * Compresses an image file to optimize size and resolution before upload.
  * Defaults to max 1MB size and 1200px width/height.
  */
-export async function compressImage(file: File, maxSizeMB = 1, maxWidthOrHeight = 1200): Promise<File> {
+export async function compressImage(file: File, maxSizeMB = 0.3, maxWidthOrHeight = 1000): Promise<File> {
   // If file is not an image or is very small, skip compression
   if (!file.type.startsWith("image/") || file.size < 100 * 1024) {
     return file;
