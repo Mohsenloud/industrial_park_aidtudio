@@ -1,0 +1,65 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile stored in Firestore, containing details of registered owners.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique user ID from Firebase Auth" },
+        "name": { "type": "string", "description": "Full name of the user" },
+        "phone": { "type": "string", "description": "Phone number" },
+        "email": { "type": "string", "description": "Email address" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the profile was created" }
+      },
+      "required": ["uid", "name", "phone", "email"]
+    },
+    "Unit": {
+      "title": "Manufacturing Unit",
+      "description": "Information about a manufacturing unit/workshop in the industrial park.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string", "description": "The UID of the user who owns this unit" },
+        "name": { "type": "string", "description": "Name of the workshop/unit" },
+        "phone": { "type": "string", "description": "Contact phone number of the workshop" },
+        "address": { "type": "string", "description": "Physical address/location in the industrial park" },
+        "description": { "type": "string", "description": "Description of activities, machinery, etc." },
+        "category": { "type": "string", "description": "Industry category (e.g. metals, plastic, wood)" },
+        "profileImage": { "type": "string", "description": "URL of the unit logo/profile image" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "name", "phone", "address", "category"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "A product manufactured by one of the units.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "unitId": { "type": "string", "description": "The unit ID that manufactures this product" },
+        "ownerId": { "type": "string", "description": "The UID of the owner" },
+        "name": { "type": "string", "description": "Product name" },
+        "description": { "type": "string", "description": "Product description and features" },
+        "image": { "type": "string", "description": "URL of the product image" },
+        "price": { "type": "string", "description": "Approximate price or price range" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "unitId", "ownerId", "name", "image"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles collection"
+    },
+    "units/{unitId}": {
+      "schema": "Unit",
+      "description": "Manufacturing units/workshops collection"
+    },
+    "products/{productId}": {
+      "schema": "Product",
+      "description": "Products manufactured by workshops"
+    }
+  }
+}

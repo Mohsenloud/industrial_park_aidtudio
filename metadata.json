@@ -1,0 +1,6 @@
+{
+  "name": "Industrial Park Directory",
+  "description": "بانک اطلاعات آنلاین واحدهای تولیدی شهرک صنعتی با امکان ثبت نام و مدیریت اطلاعات کارگاه ها و محصولات توسط مالکان.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
