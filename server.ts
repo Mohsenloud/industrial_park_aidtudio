@@ -383,6 +383,61 @@ async function startServer() {
     }
   }
 
+  // In-Memory OTP Store & Helpers for high resilience
+  const otpMemoryCache = new Map<string, { code: string; expiresAt: number }>();
+
+  async function saveOtp(target: string, code: string, expiresAt: number) {
+    const key = target.trim().toLowerCase();
+    otpMemoryCache.set(key, { code, expiresAt });
+    try {
+      await db.insert(otps)
+        .values({ phone: key, code, expiresAt })
+        .onConflictDoUpdate({
+          target: otps.phone,
+          set: { code, expiresAt }
+        });
+    } catch (err) {
+      console.warn(`[OTP Sync Notice] DB save for ${key} fallback to memory:`, err);
+    }
+  }
+
+  async function verifyAndRemoveOtp(target: string, inputCode: string): Promise<{ valid: boolean; error?: string }> {
+    const key = target.trim().toLowerCase();
+    const cleanCode = inputCode.trim();
+
+    let record = otpMemoryCache.get(key);
+
+    if (!record) {
+      try {
+        const records = await db.select().from(otps).where(eq(otps.phone, key));
+        if (records.length > 0) {
+          record = records[0];
+        }
+      } catch (err) {
+        console.warn(`[OTP Query Notice] DB lookup for ${key} fallback to memory:`, err);
+      }
+    }
+
+    if (!record) {
+      return { valid: false, error: "کد تاییدی برای این مشخصات درخواست نشده یا منقضی شده است." };
+    }
+
+    if (Date.now() > record.expiresAt) {
+      otpMemoryCache.delete(key);
+      try { await db.delete(otps).where(eq(otps.phone, key)); } catch (_) {}
+      return { valid: false, error: "کد تایید منقضی شده است. لطفاً مجدداً درخواست دهید." };
+    }
+
+    if (record.code !== cleanCode) {
+      return { valid: false, error: "کد تایید وارد شده نادرست است." };
+    }
+
+    // Successfully verified!
+    otpMemoryCache.delete(key);
+    try { await db.delete(otps).where(eq(otps.phone, key)); } catch (_) {}
+    return { valid: true };
+  }
+
   // Email OTP Request route
   app.post("/api/auth/send-email-otp", async (req, res) => {
     try {
@@ -396,12 +451,7 @@ async function startServer() {
       const code = Math.floor(10000 + Math.random() * 90000).toString();
       const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes expiry
 
-      await db.insert(otps)
-        .values({ phone: cleanEmail, code, expiresAt })
-        .onConflictDoUpdate({
-          target: otps.phone,
-          set: { code, expiresAt }
-        });
+      await saveOtp(cleanEmail, code, expiresAt);
 
       const textMessage = `کد تایید شما در سامانه شهرک صنعتی: ${code}`;
       const htmlMessage = `
@@ -425,7 +475,7 @@ async function startServer() {
       });
     } catch (err: any) {
       console.error("Error in send-email-otp:", err);
-      return res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: err.message || "خطا در ارسال کد تایید به ایمیل" });
     }
   });
 
@@ -442,12 +492,7 @@ async function startServer() {
       const code = Math.floor(10000 + Math.random() * 90000).toString();
       const expiresAt = Date.now() + 2 * 60 * 1000; // 2 minutes expiry
 
-      await db.insert(otps)
-        .values({ phone: cleanPhone, code, expiresAt })
-        .onConflictDoUpdate({
-          target: otps.phone,
-          set: { code, expiresAt }
-        });
+      await saveOtp(cleanPhone, code, expiresAt);
 
       // Fetch SMS settings from DB or defaults
       let isEnabled = true;
@@ -530,23 +575,10 @@ async function startServer() {
       const cleanPhone = phone.trim();
       const cleanCode = code.trim();
 
-      const records = await db.select().from(otps).where(eq(otps.phone, cleanPhone));
-      if (records.length === 0) {
-        return res.status(400).json({ error: "کد تاییدی برای این شماره درخواست نشده یا منقضی شده است." });
+      const verification = await verifyAndRemoveOtp(cleanPhone, cleanCode);
+      if (!verification.valid) {
+        return res.status(400).json({ error: verification.error || "کد تایید نامعتبر است." });
       }
-
-      const record = records[0];
-      if (Date.now() > record.expiresAt) {
-        await db.delete(otps).where(eq(otps.phone, cleanPhone));
-        return res.status(400).json({ error: "کد تایید منقضی شده است. لطفا دوباره تلاش کنید." });
-      }
-
-      if (record.code !== cleanCode) {
-        return res.status(400).json({ error: "کد تایید وارد شده نادرست است." });
-      }
-
-      // Valid OTP! Remove from store.
-      await db.delete(otps).where(eq(otps.phone, cleanPhone));
 
       // Check if user exists in Drizzle db
       let userResult = await db.select().from(users).where(eq(users.phone, cleanPhone));
@@ -635,23 +667,10 @@ async function startServer() {
       const cleanCode = code.trim();
 
       // Verify OTP code first
-      const records = await db.select().from(otps).where(eq(otps.phone, normalizedEmail));
-      if (records.length === 0) {
-        return res.status(400).json({ error: "کد تاییدی برای این ایمیل درخواست نشده یا منقضی شده است." });
+      const verification = await verifyAndRemoveOtp(normalizedEmail, cleanCode);
+      if (!verification.valid) {
+        return res.status(400).json({ error: verification.error || "کد تایید ایمیل نامعتبر است." });
       }
-
-      const record = records[0];
-      if (Date.now() > record.expiresAt) {
-        await db.delete(otps).where(eq(otps.phone, normalizedEmail));
-        return res.status(400).json({ error: "کد تایید منقضی شده است. لطفا دوباره تلاش کنید." });
-      }
-
-      if (record.code !== cleanCode) {
-        return res.status(400).json({ error: "کد تایید وارد شده نادرست است." });
-      }
-
-      // Valid code! Delete from DB
-      await db.delete(otps).where(eq(otps.phone, normalizedEmail));
 
       // Check if user already exists by email
       const existingUsers = await db.select().from(users).where(eq(users.email, normalizedEmail));
@@ -903,23 +922,10 @@ async function startServer() {
       const normalizedEmail = email.trim().toLowerCase();
       const cleanCode = code.trim();
 
-      const records = await db.select().from(otps).where(eq(otps.phone, normalizedEmail));
-      if (records.length === 0) {
-        return res.status(400).json({ error: "کد تاییدی برای این ایمیل درخواست نشده یا منقضی شده است." });
+      const verification = await verifyAndRemoveOtp(normalizedEmail, cleanCode);
+      if (!verification.valid) {
+        return res.status(400).json({ error: verification.error || "کد تایید وارد شده نادرست یا منقضی است." });
       }
-
-      const record = records[0];
-      if (Date.now() > record.expiresAt) {
-        await db.delete(otps).where(eq(otps.phone, normalizedEmail));
-        return res.status(400).json({ error: "کد تایید منقضی شده است. لطفاً مجدداً درخواست دهید." });
-      }
-
-      if (record.code !== cleanCode) {
-        return res.status(400).json({ error: "کد تایید وارد شده نادرست است." });
-      }
-
-      // Valid OTP
-      await db.delete(otps).where(eq(otps.phone, normalizedEmail));
 
       const foundUsers = await db.select().from(users).where(eq(users.email, normalizedEmail));
       let userObj;
