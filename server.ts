@@ -888,6 +888,90 @@ async function startServer() {
     }
   });
 
+  // Custom Reset/Set Password with Email OTP
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { email, code, newPassword } = req.body;
+      if (!email || !code || !newPassword) {
+        return res.status(400).json({ error: "ایمیل، کد تایید و کلمه عبور جدید الزامی هستند." });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: "کلمه عبور جدید باید حداقل ۶ کاراکتر باشد." });
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const cleanCode = code.trim();
+
+      const records = await db.select().from(otps).where(eq(otps.phone, normalizedEmail));
+      if (records.length === 0) {
+        return res.status(400).json({ error: "کد تاییدی برای این ایمیل درخواست نشده یا منقضی شده است." });
+      }
+
+      const record = records[0];
+      if (Date.now() > record.expiresAt) {
+        await db.delete(otps).where(eq(otps.phone, normalizedEmail));
+        return res.status(400).json({ error: "کد تایید منقضی شده است. لطفاً مجدداً درخواست دهید." });
+      }
+
+      if (record.code !== cleanCode) {
+        return res.status(400).json({ error: "کد تایید وارد شده نادرست است." });
+      }
+
+      // Valid OTP
+      await db.delete(otps).where(eq(otps.phone, normalizedEmail));
+
+      const foundUsers = await db.select().from(users).where(eq(users.email, normalizedEmail));
+      let userObj;
+      const newHash = hashPassword(newPassword);
+
+      if (foundUsers.length > 0) {
+        userObj = foundUsers[0];
+        await db.update(users).set({
+          passwordHash: newHash,
+          lastLoginAt: new Date().toISOString()
+        }).where(eq(users.uid, userObj.uid));
+      } else {
+        // Create user if not exists
+        const newUid = "usr_pass_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+        const inserted = await db.insert(users).values({
+          uid: newUid,
+          name: normalizedEmail.split("@")[0],
+          phone: "ثبت نشده",
+          email: normalizedEmail,
+          passwordHash: newHash,
+          createdAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString()
+        }).returning();
+        userObj = inserted[0];
+      }
+
+      const token = signToken({ uid: userObj.uid, email: userObj.email });
+
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        path: "/"
+      });
+
+      return res.json({
+        success: true,
+        user: {
+          uid: userObj.uid,
+          name: userObj.name,
+          phone: userObj.phone,
+          email: userObj.email,
+          token: token
+        }
+      });
+    } catch (err: any) {
+      console.error("Error in reset-password:", err);
+      return res.status(500).json({ error: err.message || "خطا در تنظیم کلمه عبور" });
+    }
+  });
+
   // Custom Logout Endpoint
   app.post("/api/auth/logout", (req, res) => {
     res.clearCookie("token", {

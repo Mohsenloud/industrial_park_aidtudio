@@ -126,6 +126,31 @@ class CustomAuthService {
     return loggedUser;
   }
 
+  async resetPassword(email: string, code: string, newPassword: string): Promise<CustomUser> {
+    const response = await fetch("/api/auth/reset-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code, newPassword }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || "خطا در تنظیم کلمه عبور");
+    }
+
+    const data = await response.json();
+    const loggedUser: CustomUser = {
+      uid: data.user.uid,
+      email: data.user.email,
+      token: data.user.token,
+    };
+
+    this.currentUser = loggedUser;
+    localStorage.setItem("custom_auth_user", JSON.stringify(loggedUser));
+    this.notifyListeners();
+    return loggedUser;
+  }
+
   async sendEmailOtp(email: string): Promise<{ success: boolean; codeSimulated?: string; message?: string }> {
     const response = await fetch("/api/auth/send-email-otp", {
       method: "POST",

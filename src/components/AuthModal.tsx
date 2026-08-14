@@ -11,13 +11,14 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
   const [authMethod, setAuthMethod] = useState<"otp" | "password">("otp");
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   
   // Form input states
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   
   // OTP States (SMS)
@@ -232,6 +233,55 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
           setLoading(false);
         }
       }
+    } else if (mode === "forgot") {
+      // Mode is FORGOT / SET PASSWORD
+      if (!email.trim()) {
+        setError("وارد کردن ایمیل الزامی است.");
+        return;
+      }
+
+      if (emailOtpStep === 1) {
+        setLoading(true);
+        try {
+          const res = await customAuth.sendEmailOtp(email.trim());
+          if (res.success) {
+            if (res.codeSimulated) {
+              setEmailSimulatedCode(res.codeSimulated);
+            }
+            setEmailOtpStep(2);
+            startEmailCountdown();
+            setSuccessMsg("کد تایید ۵ رقمی به آدرس ایمیل شما ارسال شد.");
+          }
+        } catch (err: any) {
+          console.error(err);
+          setError(err.message || "خطا در ارسال کد تایید به ایمیل.");
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // Step 2: verify and reset password
+        const cleanCode = emailOtpCode.trim();
+        if (!cleanCode) {
+          setError("لطفاً کد تایید ۵ رقمی ارسال شده به ایمیل را وارد کنید.");
+          return;
+        }
+        if (!newPassword.trim() || newPassword.length < 6) {
+          setError("کلمه عبور جدید باید حداقل ۶ کاراکتر باشد.");
+          return;
+        }
+
+        setLoading(true);
+        try {
+          await customAuth.resetPassword(email.trim(), cleanCode, newPassword.trim());
+          onAuthSuccess();
+          onClose();
+        } catch (err: any) {
+          console.error(err);
+          setError(err.message || "کد تایید اشتباه یا منقضی شده است.");
+        } finally {
+          setLoading(false);
+        }
+      }
     } else {
       // Mode is SIGNIN
       if (!email.trim() || !password.trim()) {
@@ -278,12 +328,18 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
           <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
             <div>
               <h3 className="text-base font-black text-slate-800">
-                {mode === "signin" ? "ورود به حساب کاربری" : "ثبت‌نام کارگاه صنعتی جدید"}
+                {mode === "signin" 
+                  ? "ورود به حساب کاربری" 
+                  : mode === "signup" 
+                  ? "ثبت‌نام کارگاه صنعتی جدید" 
+                  : "تعیین یا بازیابی رمز عبور"}
               </h3>
               <p className="text-[11px] text-slate-400 mt-1 font-semibold leading-relaxed">
                 {mode === "signin" 
                   ? "با ورود به سامانه می‌توانید اطلاعات کارگاه خود را ویرایش کرده یا کالا ثبت کنید." 
-                  : "با ایجاد حساب، مشخصات، محصولات و توانمندی‌های کارگاه خود را آنلاین معرفی کنید."}
+                  : mode === "signup"
+                  ? "با ایجاد حساب، مشخصات، محصولات و توانمندی‌های کارگاه خود را آنلاین معرفی کنید."
+                  : "با وارد کردن ایمیل و دریافت کد تایید، می‌توانید رمز عبور جدید تعیین کنید."}
               </p>
             </div>
             <button
@@ -295,96 +351,117 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
           </div>
 
           {/* Mode Switch (Signin / Signup) */}
-          <div className="px-6 pt-5">
-            <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl">
+          {mode !== "forgot" ? (
+            <div className="px-6 pt-5">
+              <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => { 
+                    setMode("signin"); 
+                    setError(""); 
+                    setSuccessMsg(""); 
+                    setOtpStep(1); 
+                    setOtpCode(""); 
+                    setEmailOtpStep(1);
+                    setEmailOtpCode("");
+                    setEmailSimulatedCode(null);
+                    setRequireEmailOtp(false);
+                  }}
+                  className={`py-2 text-[11px] font-black rounded-lg transition-all duration-200 cursor-pointer ${
+                    mode === "signin" 
+                      ? "bg-white text-slate-800 shadow-sm" 
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  ورود اعضا
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { 
+                    setMode("signup"); 
+                    setError(""); 
+                    setSuccessMsg(""); 
+                    setOtpStep(1); 
+                    setOtpCode(""); 
+                    setEmailOtpStep(1);
+                    setEmailOtpCode("");
+                    setEmailSimulatedCode(null);
+                    setRequireEmailOtp(false);
+                  }}
+                  className={`py-2 text-[11px] font-black rounded-lg transition-all duration-200 cursor-pointer ${
+                    mode === "signup" 
+                      ? "bg-white text-slate-800 shadow-sm" 
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  ثبت‌نام کارگاه جدید
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="px-6 pt-4">
               <button
                 type="button"
-                onClick={() => { 
-                  setMode("signin"); 
-                  setError(""); 
-                  setSuccessMsg(""); 
-                  setOtpStep(1); 
-                  setOtpCode(""); 
+                onClick={() => {
+                  setMode("signin");
+                  setError("");
+                  setSuccessMsg("");
                   setEmailOtpStep(1);
                   setEmailOtpCode("");
-                  setEmailSimulatedCode(null);
-                  setRequireEmailOtp(false);
                 }}
-                className={`py-2 text-[11px] font-black rounded-lg transition-all duration-200 cursor-pointer ${
-                  mode === "signin" 
-                    ? "bg-white text-slate-800 shadow-sm" 
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 cursor-pointer"
               >
-                ورود اعضا
-              </button>
-              <button
-                type="button"
-                onClick={() => { 
-                  setMode("signup"); 
-                  setError(""); 
-                  setSuccessMsg(""); 
-                  setOtpStep(1); 
-                  setOtpCode(""); 
-                  setEmailOtpStep(1);
-                  setEmailOtpCode("");
-                  setEmailSimulatedCode(null);
-                  setRequireEmailOtp(false);
-                }}
-                className={`py-2 text-[11px] font-black rounded-lg transition-all duration-200 cursor-pointer ${
-                  mode === "signup" 
-                    ? "bg-white text-slate-800 shadow-sm" 
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                ثبت‌نام کارگاه جدید
+                <ChevronLeft className="h-3.5 w-3.5" />
+                بازگشت به صفحه ورود اعضا
               </button>
             </div>
-          </div>
+          )}
 
           {/* Method Switch (SMS OTP / Password) */}
-          <div className="px-6 pt-3 flex items-center justify-center gap-4 text-xs font-bold border-b border-slate-100 pb-3 mt-1">
-            <button
-              type="button"
-              onClick={() => { 
-                setAuthMethod("otp"); 
-                setError(""); 
-                setSuccessMsg(""); 
-                setEmailOtpStep(1);
-                setEmailOtpCode("");
-                setEmailSimulatedCode(null);
-                setRequireEmailOtp(false);
-              }}
-              className={`pb-1 px-1 transition-all border-b-2 cursor-pointer ${
-                authMethod === "otp" 
-                  ? "border-indigo-600 text-indigo-600 font-extrabold" 
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-            >
-              کد یکبار مصرف پیامکی (OTP)
-            </button>
-            <button
-              type="button"
-              onClick={() => { 
-                setAuthMethod("password"); 
-                setError(""); 
-                setSuccessMsg(""); 
-                setOtpStep(1);
-                setOtpCode("");
-                setEmailOtpStep(1);
-                setEmailOtpCode("");
-                setEmailSimulatedCode(null);
-                setRequireEmailOtp(false);
-              }}
-              className={`pb-1 px-1 transition-all border-b-2 cursor-pointer ${
-                authMethod === "password" 
-                  ? "border-indigo-600 text-indigo-600 font-extrabold" 
-                  : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-            >
-              ایمیل و رمز عبور
-            </button>
-          </div>
+          {mode !== "forgot" && (
+            <div className="px-6 pt-3 flex items-center justify-center gap-4 text-xs font-bold border-b border-slate-100 pb-3 mt-1">
+              <button
+                type="button"
+                onClick={() => { 
+                  setAuthMethod("otp"); 
+                  setError(""); 
+                  setSuccessMsg(""); 
+                  setEmailOtpStep(1);
+                  setEmailOtpCode("");
+                  setEmailSimulatedCode(null);
+                  setRequireEmailOtp(false);
+                }}
+                className={`pb-1 px-1 transition-all border-b-2 cursor-pointer ${
+                  authMethod === "otp" 
+                    ? "border-indigo-600 text-indigo-600 font-extrabold" 
+                    : "border-transparent text-slate-400 hover:text-slate-600"
+                }`}
+              >
+                کد یکبار مصرف پیامکی (OTP)
+              </button>
+              <button
+                type="button"
+                onClick={() => { 
+                  setAuthMethod("password"); 
+                  setError(""); 
+                  setSuccessMsg(""); 
+                  setOtpStep(1);
+                  setOtpCode("");
+                  setEmailOtpStep(1);
+                  setEmailOtpCode("");
+                  setEmailSimulatedCode(null);
+                  setRequireEmailOtp(false);
+                }}
+                className={`pb-1 px-1 transition-all border-b-2 cursor-pointer ${
+                  authMethod === "password" 
+                    ? "border-indigo-600 text-indigo-600 font-extrabold" 
+                    : "border-transparent text-slate-400 hover:text-slate-600"
+                }`}
+              >
+                ایمیل و رمز عبور
+              </button>
+            </div>
+          )}
 
           {/* Message Area */}
           <div className="px-6 pt-4">
@@ -601,29 +678,48 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                     </div>
                   </div>
 
-                  {/* Password */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-600">کلمه عبور <span className="text-rose-500">*</span></label>
-                    <div className="relative">
-                      <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        required
-                        minLength={6}
-                        placeholder="حداقل ۶ کاراکتر"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-right"
-                      />
+                  {/* Password (Only for signin and signup) */}
+                  {mode !== "forgot" && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold text-slate-600">کلمه عبور <span className="text-rose-500">*</span></label>
+                        {mode === "signin" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMode("forgot");
+                              setEmailOtpStep(1);
+                              setEmailOtpCode("");
+                              setError("");
+                              setSuccessMsg("");
+                            }}
+                            className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer"
+                          >
+                            فراموشی / تعیین رمز عبور
+                          </button>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          required
+                          minLength={6}
+                          placeholder="حداقل ۶ کاراکتر"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-right"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <button
                     type="submit"
@@ -636,7 +732,13 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                         <span>در حال بررسی اطلاعات...</span>
                       </>
                     ) : (
-                      <span>{mode === "signin" ? "ورود به سیستم" : "ارسال کد تایید به ایمیل"}</span>
+                      <span>
+                        {mode === "signin" 
+                          ? "ورود به سیستم" 
+                          : mode === "signup"
+                          ? "ارسال کد تایید به ایمیل"
+                          : "ارسال کد تایید جهت بازیابی / تعیین رمز"}
+                      </span>
                     )}
                   </button>
                 </>
@@ -645,16 +747,14 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                   {/* Step 2: Email OTP Verification Input */}
                   <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-2xl flex items-center justify-between text-xs">
                     <span className="text-slate-600 font-bold">ارسال به ایمیل: <strong className="font-mono text-slate-800">{email}</strong></span>
-                    {mode === "signup" && (
-                      <button
-                        type="button"
-                        onClick={() => { setEmailOtpStep(1); setEmailOtpCode(""); setError(""); setSuccessMsg(""); }}
-                        className="text-indigo-600 hover:text-indigo-800 font-black flex items-center gap-0.5 cursor-pointer text-[10px]"
-                      >
-                        <ChevronLeft className="h-3.5 w-3.5" />
-                        ویرایش مشخصات
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => { setEmailOtpStep(1); setEmailOtpCode(""); setError(""); setSuccessMsg(""); }}
+                      className="text-indigo-600 hover:text-indigo-800 font-black flex items-center gap-0.5 cursor-pointer text-[10px]"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                      ویرایش ایمیل
+                    </button>
                   </div>
 
                   <div className="space-y-1.5">
@@ -672,6 +772,32 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                       />
                     </div>
                   </div>
+
+                  {/* If mode is forgot, ask for new password in step 2 */}
+                  {mode === "forgot" && (
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-600">کلمه عبور جدید <span className="text-rose-500">*</span></label>
+                      <div className="relative">
+                        <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          required
+                          minLength={6}
+                          placeholder="حداقل ۶ کاراکتر"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-right"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {emailSimulatedCode && (
                     <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-2xl text-amber-800 text-[10px] font-bold space-y-1">
