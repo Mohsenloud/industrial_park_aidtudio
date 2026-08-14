@@ -134,7 +134,7 @@ export default function IndustrialAds() {
       {loading ? (
         <BannerSkeleton />
       ) : (
-        <div className="relative h-44 sm:h-48 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 group shadow-md">
+        <div className="relative min-h-[175px] sm:h-48 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 group shadow-md">
           <AnimatePresence mode="wait">
             {bannersList[currentSlide] && (() => {
               const ad = bannersList[currentSlide];
@@ -145,11 +145,11 @@ export default function IndustrialAds() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -50 }}
                   transition={{ duration: 0.4 }}
-                  className="absolute inset-0 flex flex-col md:flex-row items-stretch justify-between"
+                  className="absolute inset-0 flex flex-row items-stretch justify-between"
                 >
                   {/* Visual Image Background / Left side */}
-                  <div className="relative w-full md:w-2/5 h-1/2 md:h-full overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r md:bg-gradient-to-l from-slate-950 via-slate-950/60 to-transparent z-10" />
+                  <div className="relative w-1/3 sm:w-2/5 h-full overflow-hidden shrink-0">
+                    <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/40 to-transparent z-10" />
                     <img
                       src={ad.image}
                       alt={ad.companyName}
@@ -160,35 +160,35 @@ export default function IndustrialAds() {
                   </div>
 
                   {/* Info Text Right side */}
-                  <div className="w-full md:w-3/5 p-4 sm:p-5 flex flex-col justify-between z-20 text-right bg-slate-950 text-white relative">
+                  <div className="w-2/3 sm:w-3/5 p-3 sm:p-5 flex flex-col justify-between z-20 text-right bg-slate-950 text-white relative">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-bold bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                        <span className="text-[9px] sm:text-[10px] font-bold bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">
                           {ad.badge}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-semibold">{ad.companyName}</span>
+                        <span className="text-[10px] sm:text-xs text-slate-400 font-semibold truncate max-w-[130px] sm:max-w-none">{ad.companyName}</span>
                       </div>
-                      <h4 className="text-xs sm:text-sm font-black text-white leading-snug">
+                      <h4 className="text-xs sm:text-sm font-black text-white leading-snug line-clamp-1 sm:line-clamp-2">
                         {ad.title}
                       </h4>
-                      <p className="text-[10px] sm:text-xs text-slate-400 font-normal leading-relaxed line-clamp-2 md:line-clamp-3">
+                      <p className="text-[10px] sm:text-xs text-slate-400 font-normal leading-relaxed line-clamp-2 sm:line-clamp-3">
                         {ad.description}
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-                      <div className="flex items-center gap-1.5 text-[10px] text-slate-300">
-                        <Phone className="h-3.5 w-3.5 text-emerald-400" />
-                        <span className="font-bold">تلفن هماهنگی:</span>
+                    <div className="flex items-center justify-between pt-1.5 sm:pt-2 border-t border-slate-800 gap-2">
+                      <div className="flex items-center gap-1 text-[9px] sm:text-[10px] text-slate-300 truncate">
+                        <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-400 shrink-0" />
+                        <span className="font-bold hidden xs:inline">تماس:</span>
                         <a href={`tel:${ad.phone}`} className="font-mono hover:text-emerald-300 font-bold tracking-wider">
                           {ad.phone}
                         </a>
                       </div>
                       <button
                         onClick={() => setActivePromoAd(ad)}
-                        className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+                        className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[9px] sm:text-[10px] font-bold rounded-lg transition-all cursor-pointer shrink-0"
                       >
-                        جزئیات کامل
+                        جزئیات
                       </button>
                     </div>
                   </div>
@@ -332,7 +332,7 @@ export default function IndustrialAds() {
                       placeholder="مانند: ۰۹۱۲۳۴۵۶۷۸۹"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-left outline-none focus:border-indigo-500 focus:bg-white transition-all font-semibold font-mono"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-right outline-none focus:border-indigo-500 focus:bg-white transition-all font-semibold font-mono"
                     />
                   </div>
 

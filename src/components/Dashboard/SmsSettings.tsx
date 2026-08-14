@@ -190,7 +190,7 @@ export default function SmsSettings({ isAdmin, onClose }: SmsSettingsProps) {
                 placeholder="مانند: 3000505 یا 10008585"
                 value={smsSender}
                 onChange={(e) => setSmsSender(e.target.value)}
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-left outline-none focus:border-indigo-500 transition-all font-semibold"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-right outline-none focus:border-indigo-500 transition-all font-semibold"
               />
             </div>
 
@@ -203,7 +203,7 @@ export default function SmsSettings({ isAdmin, onClose }: SmsSettingsProps) {
                   placeholder="مثل: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
                   value={smsApiKey}
                   onChange={(e) => setSmsApiKey(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-left outline-none focus:border-indigo-500 transition-all font-semibold pl-10"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-right outline-none focus:border-indigo-500 transition-all font-semibold pl-10"
                 />
                 <button
                   type="button"

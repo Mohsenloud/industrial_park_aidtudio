@@ -1,4 +1,4 @@
-import { pgTable, text, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, doublePrecision, integer } from "drizzle-orm/pg-core";
 
 // Users table (maps Firebase UID to other profile details)
 export const users = pgTable("users", {
@@ -30,6 +30,7 @@ export const units = pgTable("units", {
   seoDescription: text("seo_description"),
   email: text("email"),
   website: text("website"),
+  status: text("status").default("pending"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
@@ -111,6 +112,38 @@ export const smsLogs = pgTable("sms_logs", {
   template: text("template").notNull(),
   status: text("status").notNull(),
   timestamp: text("timestamp").notNull(),
+});
+
+// Chat Conversations
+export const conversations = pgTable("conversations", {
+  id: text("id").primaryKey(),
+  unitId: text("unit_id").notNull(),
+  guestId: text("guest_id").notNull(),
+  guestName: text("guest_name").notNull(),
+  guestPhone: text("guest_phone").notNull(),
+  lastMessageAt: text("last_message_at").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// Chat Messages
+export const messages = pgTable("messages", {
+  id: text("id").primaryKey(),
+  conversationId: text("conversation_id").notNull(),
+  sender: text("sender").notNull(), // 'guest' | 'owner'
+  content: text("content").notNull(),
+  createdAt: text("created_at").notNull(),
+  isRead: text("is_read").notNull(), // 'true' | 'false' (stored as text for compatibility)
+});
+
+// Reviews and Ratings
+export const reviews = pgTable("reviews", {
+  id: text("id").primaryKey(),
+  unitId: text("unit_id").notNull(),
+  authorName: text("author_name").notNull(),
+  rating: integer("rating").notNull(), // 1 to 5
+  comment: text("comment").notNull(),
+  status: text("status").notNull().default("approved"), // 'pending', 'approved', 'rejected'
+  createdAt: text("created_at").notNull(),
 });
 
 

@@ -24,8 +24,11 @@ export interface Unit {
   seoDescription?: string; // توضیحات سئو
   email?: string; // ایمیل کارگاه
   website?: string; // وب‌سایت کارگاه
+  status?: 'pending' | 'approved' | 'rejected';
   createdAt: string;
   updatedAt: string;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 export interface Product {

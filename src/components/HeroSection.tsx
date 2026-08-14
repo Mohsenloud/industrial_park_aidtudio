@@ -82,7 +82,7 @@ export default function HeroSection({
   };
 
   return (
-    <div className="relative overflow-hidden bg-slate-900 text-white py-12 px-4 sm:px-6 lg:px-8 rounded-3xl mb-10 shadow-xl border border-slate-800">
+    <div className="relative w-full bg-slate-900 text-white py-6 sm:py-12 px-3.5 sm:px-6 lg:px-8 rounded-2xl sm:rounded-3xl mb-4 sm:mb-6 shadow-xl border border-slate-800 overflow-hidden">
       {/* Background Decorative Circles */}
       <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl" />
       <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 rounded-full bg-indigo-600/10 blur-3xl" />
@@ -92,7 +92,7 @@ export default function HeroSection({
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded-full text-xs font-semibold mb-6 border border-indigo-500/20"
+          className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded-full text-[11px] sm:text-xs font-semibold mb-3 sm:mb-6 border border-indigo-500/20"
         >
           <Factory className="h-3 w-3" />
           <span>مرجع رسمی صنعتگران و تولیدکنندگان شهرک صنعتی</span>
@@ -102,7 +102,7 @@ export default function HeroSection({
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4 text-white leading-tight"
+          className="text-xl sm:text-3xl lg:text-5xl font-extrabold tracking-tight mb-2 sm:mb-4 text-white leading-tight"
         >
           بانک اطلاعات و محصولات واحدهای تولیدی
         </motion.h2>
@@ -111,31 +111,31 @@ export default function HeroSection({
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto mb-8 font-light leading-relaxed"
+          className="text-xs sm:text-base lg:text-lg text-slate-300 max-w-2xl mx-auto mb-5 sm:mb-8 font-light leading-relaxed px-2"
         >
           به راحتی کارگاه‌ها و محصولات فعال در شهرک صنعتی را جستجو کنید. اگر صاحب کارگاه تولیدی هستید، با ایجاد حساب کاربری رایگان، اطلاعات و محصولات خود را برای عموم معرفی کنید.
         </motion.p>
 
         {/* Search Input Box with Live Dropdown */}
-        <div ref={containerRef} className="relative max-w-2xl mx-auto z-40">
+        <div ref={containerRef} className="relative max-w-2xl mx-auto z-30">
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="bg-white rounded-2xl p-2 shadow-xl flex flex-col sm:flex-row items-center gap-2 border border-slate-700/50"
+            className="bg-white rounded-2xl p-1.5 sm:p-2 shadow-xl flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2 border border-slate-700/50"
           >
             <div className="relative w-full flex-1">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4 sm:h-5 sm:w-5" />
               <input
                 type="text"
-                placeholder="جستجوی نام کارگاه، خدمات یا محصولات تولیدی..."
+                placeholder="جستجوی نام کارگاه، خدمات یا محصولات..."
                 value={searchQuery}
                 onFocus={() => setShowDropdown(true)}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
                   setShowDropdown(true);
                 }}
-                className="w-full pl-10 pr-11 py-3 text-slate-800 placeholder-slate-400 bg-transparent rounded-xl outline-none text-sm font-medium focus:ring-0 text-right"
+                className="w-full pl-8 sm:pl-10 pr-9 sm:pr-11 py-2.5 sm:py-3 text-slate-800 placeholder-slate-400 bg-transparent rounded-xl outline-none text-xs sm:text-sm font-medium focus:ring-0 text-right"
                 style={{ direction: "rtl" }}
               />
               {searchQuery && (
@@ -144,22 +144,22 @@ export default function HeroSection({
                     setSearchQuery("");
                     setShowDropdown(false);
                   }}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                  className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
               )}
             </div>
             
-            <div className="flex w-full sm:w-auto items-center gap-2 border-t sm:border-t-0 sm:border-r border-slate-100 pt-2 sm:pt-0 sm:pr-2">
-              <SlidersHorizontal className="text-slate-400 h-4 w-4 hidden sm:block" />
+            <div className="flex w-full sm:w-auto items-center gap-1 sm:gap-2 border-t sm:border-t-0 sm:border-r border-slate-100 pt-1.5 sm:pt-0 sm:pr-2">
+              <SlidersHorizontal className="text-slate-400 h-3.5 w-3.5 hidden sm:block" />
               <select
                 value={selectedCategory}
                 onChange={(e) => {
                   setSelectedCategory(e.target.value);
                   setShowDropdown(true);
                 }}
-                className="w-full sm:w-48 py-3 px-2 bg-transparent text-slate-600 font-semibold text-xs outline-none cursor-pointer text-right"
+                className="w-full sm:w-44 py-2 sm:py-3 px-2 bg-slate-50 sm:bg-transparent rounded-lg sm:rounded-none text-slate-700 sm:text-slate-600 font-semibold text-xs outline-none cursor-pointer text-right"
                 style={{ direction: "rtl" }}
               >
                 <option value="">همه دسته‌بندی‌ها</option>
@@ -271,24 +271,24 @@ export default function HeroSection({
         </div>
 
         {/* Feature stats */}
-        <div className="grid grid-cols-3 gap-4 mt-12 max-w-2xl mx-auto pt-8 border-t border-slate-800">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-6 sm:mt-10 max-w-2xl mx-auto pt-4 sm:pt-8 border-t border-slate-800/80">
           <div className="text-center">
             <div className="flex justify-center text-indigo-400 mb-1">
-              <ShieldCheck className="h-5 w-5" />
+              <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <p className="text-xs text-slate-400">اطلاعات تأیید شده</p>
+            <p className="text-[10px] sm:text-xs text-slate-400 font-medium">اطلاعات تأیید شده</p>
           </div>
           <div className="text-center">
             <div className="flex justify-center text-indigo-400 mb-1">
-              <Users className="h-5 w-5" />
+              <Users className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <p className="text-xs text-slate-400">دسترسی مستقیم</p>
+            <p className="text-[10px] sm:text-xs text-slate-400 font-medium">دسترسی مستقیم</p>
           </div>
           <div className="text-center">
             <div className="flex justify-center text-indigo-400 mb-1">
-              <Award className="h-5 w-5" />
+              <Award className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <p className="text-xs text-slate-400">معرفی کالا و خدمات</p>
+            <p className="text-[10px] sm:text-xs text-slate-400 font-medium">معرفی کالا و خدمات</p>
           </div>
         </div>
       </div>

@@ -18,6 +18,7 @@ import { Unit, CATEGORIES, UserProfile } from "../../types";
 import { CustomUser } from "../../lib/customAuth";
 import { saveUnit } from "../../lib/firebaseUtils";
 import { compressImage } from "../../lib/imageCompression";
+import MapLocationPicker from "../MapLocationPicker";
 import toast from "react-hot-toast";
 
 interface UnitFormProps {
@@ -158,9 +159,9 @@ export default function UnitForm({
     try {
       await saveUnit(newUnit);
       onSave(newUnit);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("خطا در ذخیره اطلاعات کارگاه.");
+      toast.error(err.message || "خطا در ذخیره اطلاعات کارگاه.");
     } finally {
       setSavingUnit(false);
     }
@@ -234,7 +235,7 @@ export default function UnitForm({
               placeholder="مانند: 02144556677"
               value={unitPhone}
               onChange={(e) => setUnitPhone(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-left font-semibold"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-right font-semibold"
             />
           </div>
 
@@ -303,7 +304,7 @@ export default function UnitForm({
                 placeholder="مانند: 02144556677"
                 value={unitPhone}
                 onChange={(e) => setUnitPhone(e.target.value)}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-left font-semibold"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-right font-semibold"
               />
             </div>
 
@@ -318,7 +319,7 @@ export default function UnitForm({
                 placeholder="مانند: 09121112233"
                 value={unitMobile1}
                 onChange={(e) => setUnitMobile1(e.target.value)}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-left font-semibold"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-right font-semibold"
               />
             </div>
 
@@ -333,7 +334,7 @@ export default function UnitForm({
                 placeholder="مانند: 09354445566"
                 value={unitMobile2}
                 onChange={(e) => setUnitMobile2(e.target.value)}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-left font-semibold"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-right font-semibold"
               />
             </div>
           </div>
@@ -350,7 +351,7 @@ export default function UnitForm({
                 placeholder="info@yourcompany.com :مانند"
                 value={unitEmail}
                 onChange={(e) => setUnitEmail(e.target.value)}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-left font-semibold"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-right font-semibold"
               />
             </div>
 
@@ -365,7 +366,7 @@ export default function UnitForm({
                 placeholder="https://yourcompany.com :مانند"
                 value={unitWebsite}
                 onChange={(e) => setUnitWebsite(e.target.value)}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-left font-semibold"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-right font-semibold"
               />
             </div>
           </div>
@@ -394,18 +395,33 @@ export default function UnitForm({
             />
           </div>
 
+          {/* Interactive Map Picker Component */}
+          <div className="pt-2">
+            <MapLocationPicker
+              latitude={unitLatitude ? parseFloat(unitLatitude) : undefined}
+              longitude={unitLongitude ? parseFloat(unitLongitude) : undefined}
+              category={unitCategory}
+              unitName={unitName}
+              onChange={(lat, lng) => {
+                setUnitLatitude(lat !== undefined ? String(lat) : "");
+                setUnitLongitude(lng !== undefined ? String(lng) : "");
+              }}
+              onGenerateMapUrl={(url) => setUnitMapUrl(url)}
+            />
+          </div>
+
           {/* Coordinates and GPS */}
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end pt-2 border-t border-slate-200/60">
             {/* Latitude */}
             <div className="sm:col-span-4 space-y-1.5">
               <label className="text-[11px] font-bold text-slate-600">عرض جغرافیایی (Latitude)</label>
               <input
                 type="number"
                 step="any"
-                placeholder="مانند: 35.6892"
+                placeholder="مانند: 35.3812"
                 value={unitLatitude}
                 onChange={(e) => setUnitLatitude(e.target.value)}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-left"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-right"
               />
             </div>
 
@@ -415,10 +431,10 @@ export default function UnitForm({
               <input
                 type="number"
                 step="any"
-                placeholder="مانند: 51.3890"
+                placeholder="مانند: 50.5225"
                 value={unitLongitude}
                 onChange={(e) => setUnitLongitude(e.target.value)}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-left"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-right"
               />
             </div>
 
@@ -446,7 +462,7 @@ export default function UnitForm({
               placeholder="مانند: https://nshn.ir/... یا https://balad.ir/... یا https://goo.gl/maps/..."
               value={unitMapUrl}
               onChange={(e) => setUnitMapUrl(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-left"
+              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-mono text-right"
             />
             <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
               می‌توانید لینک اشتراک‌گذاری لوکیشن از برنامه‌های نقشه و مسیریاب را برای هدایت راحت‌تر مشتریان کپی کرده و در این قسمت قرار دهید.

@@ -178,7 +178,7 @@ export default function QuotesList({ unitId, products }: QuotesListProps) {
                   <p className="whitespace-pre-line text-slate-500">{quote.description || "توضیحات تکمیلی یا مشخصات فنی اختصاصی ارائه نشده است."}</p>
                 </div>
 
-                <div className="text-[9px] text-slate-400 font-mono text-left">
+                <div className="text-[9px] text-slate-400 font-mono text-right">
                   تاریخ ثبت درخواست: {new Date(quote.createdAt).toLocaleString("fa-IR")}
                 </div>
               </div>

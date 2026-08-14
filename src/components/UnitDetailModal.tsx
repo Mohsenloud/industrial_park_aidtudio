@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { ProductGridSkeleton } from "./Skeleton";
 import toast from "react-hot-toast";
 import { formatPrice } from "../lib/helpers";
+import ChatSystem from "./ChatSystem";
+import UnitReviews from "./UnitReviews";
 
 interface UnitDetailModalProps {
   unit: Unit | null;
@@ -28,6 +30,7 @@ export default function UnitDetailModal({ unit, onClose, onUnitChange }: UnitDet
   const [quoteDesc, setQuoteDesc] = useState("");
   const [sendingQuote, setSendingQuote] = useState(false);
   const [quoteSuccess, setQuoteSuccess] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Quick Share States
   const [copied, setCopied] = useState(false);
@@ -455,7 +458,7 @@ export default function UnitDetailModal({ unit, onClose, onUnitChange }: UnitDet
                         </div>
                         <div className="flex flex-col text-right truncate">
                           <span className="text-[9px] text-slate-400">آدرس ایمیل</span>
-                          <span className="font-mono text-xs font-bold truncate max-w-[180px] text-left" style={{ direction: "ltr" }}>{unit.email}</span>
+                          <span className="font-mono text-xs font-bold truncate max-w-[180px] text-right" style={{ direction: "rtl" }}>{unit.email}</span>
                         </div>
                       </a>
                     )}
@@ -473,7 +476,7 @@ export default function UnitDetailModal({ unit, onClose, onUnitChange }: UnitDet
                         </div>
                         <div className="flex flex-col text-right truncate">
                           <span className="text-[9px] text-slate-400">وب‌سایت کارگاه</span>
-                          <span className="font-mono text-xs font-bold truncate max-w-[180px] text-left" style={{ direction: "ltr" }}>{unit.website}</span>
+                          <span className="font-mono text-xs font-bold truncate max-w-[180px] text-right" style={{ direction: "rtl" }}>{unit.website}</span>
                         </div>
                       </a>
                     )}
@@ -501,6 +504,15 @@ export default function UnitDetailModal({ unit, onClose, onUnitChange }: UnitDet
                         <span>مسیریابی و لوکیشن کارگاه</span>
                       </a>
                     )}
+
+                    {/* Chat Button */}
+                    <button
+                      onClick={() => setIsChatOpen(true)}
+                      className="w-full flex items-center justify-center gap-2 p-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all duration-200 text-xs font-bold shadow-md shadow-emerald-100 cursor-pointer mt-1"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      <span>گفتگوی آنلاین با کارگاه</span>
+                    </button>
                   </div>
                 </div>
 
@@ -512,6 +524,13 @@ export default function UnitDetailModal({ unit, onClose, onUnitChange }: UnitDet
                 </div>
               </div>
             </div>
+            
+            <ChatSystem 
+              unitId={unit.id} 
+              unitName={unit.name} 
+              isOpen={isChatOpen} 
+              onClose={() => setIsChatOpen(false)} 
+            />
 
             {/* Products Catalog section */}
             <div className="space-y-4 pt-4 border-t border-slate-100">
@@ -575,6 +594,10 @@ export default function UnitDetailModal({ unit, onClose, onUnitChange }: UnitDet
                 </div>
               )}
             </div>
+
+            {/* Reviews Section */}
+            <UnitReviews unitId={unit.id} />
+
           </div>
         </motion.div>
       </div>
@@ -777,7 +800,7 @@ export default function UnitDetailModal({ unit, onClose, onUnitChange }: UnitDet
                                   placeholder="مانند: 09123456789"
                                   value={buyerPhone}
                                   onChange={(e) => setBuyerPhone(e.target.value)}
-                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-medium text-left font-mono"
+                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-medium text-right font-mono"
                                 />
                               </div>
                             </div>

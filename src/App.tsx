@@ -9,10 +9,14 @@ import { UnitGridSkeleton } from "./components/Skeleton";
 import UnitDetailModal from "./components/UnitDetailModal";
 import AuthModal from "./components/AuthModal";
 import Dashboard from "./components/Dashboard";
+import AdminDashboard from "./components/AdminDashboard";
 import CategoryBar from "./components/CategoryBar";
 import IndustrialAds from "./components/IndustrialAds";
 import AllProductsPage from "./components/AllProductsPage";
 import Classifieds from "./components/Classifieds";
+import IndustrialParkMap from "./components/IndustrialParkMap";
+import InstallPWA from "./components/InstallPWA";
+
 import { 
   Building2, 
   Search, 
@@ -25,17 +29,25 @@ import {
   Info, 
   Loader2,
   AlertCircle,
-  LogOut
+  LogOut,
+  Map as MapIcon,
+  Layers
 } from "lucide-react";
 import { motion } from "motion/react";
 import { Toaster } from "react-hot-toast";
+import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 
 export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isRouteAdmin = location.pathname.startsWith("/app/adminpanel");
   const [user, setUser] = useState<CustomUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"home" | "products" | "classifieds" | "dashboard">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "map" | "products" | "classifieds" | "dashboard" | "admin">("home");
+  const [homeViewMode, setHomeViewMode] = useState<"grid" | "map">("grid");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Main Data States
@@ -59,6 +71,7 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = customAuth.onAuthStateChanged(async (currentUser) => {
       setUser(currentUser);
+      if (!currentUser) setAuthLoading(false);
       if (currentUser) {
         // Fetch is-admin state
         try {
@@ -91,6 +104,8 @@ export default function App() {
           setProfile(userProfile);
         } catch (err) {
           console.error("Error syncing profile to PostgreSQL:", err);
+        } finally {
+          setAuthLoading(false);
         }
       } else {
         setProfile(null);
@@ -177,20 +192,42 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
       <Toaster position="top-center" reverseOrder={false} />
+      
       {/* Header / Navbar */}
       <Navbar
         user={user}
         profile={profile}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        isAdmin={isAdmin}
+        activeTab={isRouteAdmin ? "admin" : activeTab}
+        setActiveTab={(tab) => {
+          if (tab === "admin") {
+            navigate("/app/adminpanel");
+          } else {
+            if (isRouteAdmin) navigate("/");
+            setActiveTab(tab);
+          }
+        }}
         onOpenAuth={() => setAuthModalOpen(true)}
         onLogout={handleLogout}
       />
 
       {/* Main Content Workspace */}
-      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
+      <main className="max-w-7xl mx-auto w-full px-3.5 sm:px-6 lg:px-8 py-4 sm:py-8 flex-1 flex flex-col relative">
+        <Routes>
+          <Route path="/app/adminpanel" element={
+            authLoading ? (
+              <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-indigo-600" /></div>
+            ) : user && isAdmin ? (
+              <AdminDashboard user={user} profile={profile} />
+            ) : (
+              <Navigate to="/" />
+            )
+          } />
+          <Route path="/*" element={
+            <>
+              
         {activeTab === "home" && (
-          <div className="space-y-6">
+          <div className="w-full space-y-4 sm:space-y-6">
             {/* Hero Section */}
             <HeroSection
               searchQuery={searchQuery}
@@ -212,21 +249,57 @@ export default function App() {
             {/* Industrial Banner Ads Showcase */}
             <IndustrialAds />
 
-            {/* Quick Helper Category Badge Row */}
-            <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-4">
+            {/* Quick Helper Category Badge Row & View Switcher */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-4 gap-2 flex-wrap">
               <div className="flex items-center gap-2">
                 <Building2 className="h-5 w-5 text-indigo-600" />
                 <h3 className="font-extrabold text-base sm:text-lg text-slate-800">
                   واحدهای تولیدی شهرک صنعتی
                 </h3>
               </div>
-              <span className="text-xs text-slate-400 font-bold font-mono bg-slate-100 px-3 py-1 rounded-full">
-                {filteredUnits.length} واحد صنعتی یافت شد
-              </span>
+
+              <div className="flex items-center gap-2">
+                {/* View Switcher (Grid vs Map) */}
+                <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+                  <button
+                    onClick={() => setHomeViewMode("grid")}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      homeViewMode === "grid"
+                        ? "bg-white text-indigo-600 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    <Grid className="h-3.5 w-3.5" />
+                    <span>لیست کارت‌ها</span>
+                  </button>
+                  <button
+                    onClick={() => setHomeViewMode("map")}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      homeViewMode === "map"
+                        ? "bg-white text-indigo-600 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    <span>نقشه جانمایی</span>
+                  </button>
+                </div>
+
+                <span className="text-xs text-slate-500 font-bold font-mono bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 hidden sm:inline-block">
+                  {filteredUnits.length} واحد
+                </span>
+              </div>
             </div>
 
-            {/* Main Units Grid or Loading spinner */}
-            {dataLoading ? (
+            {/* Main Units View (Map or Grid) */}
+            {homeViewMode === "map" ? (
+              <div className="space-y-4">
+                <IndustrialParkMap
+                  units={units}
+                  onSelectUnit={(selected) => setSelectedUnit(selected)}
+                />
+              </div>
+            ) : dataLoading ? (
               <div className="space-y-4">
                 <p className="text-xs font-semibold text-slate-400">در حال بارگذاری بانک اطلاعاتی شهرک صنعتی...</p>
                 <UnitGridSkeleton count={6} />
@@ -299,6 +372,39 @@ export default function App() {
           </div>
         )}
 
+        {activeTab === "map" && (
+          <div className="w-full space-y-4">
+            {/* Map Tab Header */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3" style={{ direction: "rtl" }}>
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100">
+                  <MapPin className="h-6 w-6" />
+                </div>
+                <div>
+                  <h2 className="font-extrabold text-base sm:text-lg text-slate-800">
+                    نقشه و جانمایی واحدهای شهرک صنعتی
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    موقعیت جغرافیایی، آدرس کارگاه‌ها، دسترسی به صنایع و مسیریابی آنلاین به صورت تعاملی
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <span className="text-xs font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                  مجموع: {units.length} کارگاه فعال
+                </span>
+              </div>
+            </div>
+
+            {/* Full Interactive Map */}
+            <IndustrialParkMap
+              units={units}
+              onSelectUnit={(selected) => setSelectedUnit(selected)}
+            />
+          </div>
+        )}
+
         {activeTab === "products" && (
           <AllProductsPage
             units={units}
@@ -325,10 +431,15 @@ export default function App() {
             key={user.uid}
           />
         )}
+
+      
+            </>
+          } />
+        </Routes>
       </main>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-slate-400 py-10 mt-16 border-t border-slate-800">
+      <footer className="bg-slate-900 text-slate-400 py-10 pb-24 md:pb-10 mt-16 border-t border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
           <p className="text-sm font-semibold text-slate-300">
             سامانه بانک اطلاعاتی آنلاین واحدهای تولیدی شهرک صنعتی
@@ -357,6 +468,9 @@ export default function App() {
         onClose={() => setSelectedUnit(null)}
         onUnitChange={(u) => setSelectedUnit(u)}
       />
+
+      {/* PWA Install Banner */}
+      <InstallPWA />
 
       {/* Custom Logout Confirmation Modal */}
       {showLogoutConfirm && (

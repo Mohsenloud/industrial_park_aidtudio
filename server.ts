@@ -5,12 +5,14 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { createServer as createViteServer } from "vite";
 import { db } from "./src/db/index.ts";
-import { users, units, products, banners, settings, classifieds, quotes, otps, smsLogs } from "./src/db/schema.ts";
+import { users, units, products, banners, settings, classifieds, quotes, otps, smsLogs, conversations, messages, reviews } from "./src/db/schema.ts";
 import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
 import { signToken } from "./src/middleware/tokenUtils.ts";
-import { eq } from "drizzle-orm";
+import { eq, or, and, desc } from "drizzle-orm";
 import cookieParser from "cookie-parser";
 import nodemailer from "nodemailer";
+import { createServer } from "http";
+import { Server } from "socket.io";
 
 async function startServer() {
   const app = express();
@@ -934,22 +936,30 @@ async function startServer() {
     }
   });
 
-  // API Upload Route (Saves Base64 images to local folder)
+  // API Upload Route (Stores Base64 images permanently in DB & disk fallback)
   app.post("/api/upload", (req, res) => {
     try {
-      const { image, fileName } = req.body;
+      const { image } = req.body;
       if (!image) {
         return res.status(400).json({ error: "فایل تصویر ارسال نشده است." });
       }
-      const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (!matches || matches.length !== 3) {
-        return res.status(400).json({ error: "قالب تصویر نامعتبر است." });
+      if (typeof image === "string" && image.startsWith("data:image/")) {
+        try {
+          const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+          if (matches && matches.length === 3) {
+            const ext = matches[1].split('/')[1] || 'png';
+            const buffer = Buffer.from(matches[2], 'base64');
+            const uniqueName = `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${ext}`;
+            fs.writeFileSync(path.join(uploadDir, uniqueName), buffer);
+            return res.json({ url: `/uploads/${uniqueName}` });
+          }
+        } catch (e) {
+          // ignore disk write errors
+          console.error("File write error:", e);
+        }
+        return res.status(500).json({ error: "خطا در ذخیره سازی تصویر" });
       }
-      const ext = matches[1].split('/')[1] || 'png';
-      const buffer = Buffer.from(matches[2], 'base64');
-      const uniqueName = `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${ext}`;
-      fs.writeFileSync(path.join(uploadDir, uniqueName), buffer);
-      return res.json({ url: `/uploads/${uniqueName}` });
+      return res.json({ url: image });
     } catch (err: any) {
       console.error(err);
       return res.status(500).json({ error: err.message || "خطا در ذخیره‌سازی تصویر" });
@@ -1012,17 +1022,27 @@ async function startServer() {
       const category = req.query.category as string;
       const search = req.query.search as string;
       
-      let allUnits = await db.select().from(units);
+      let allUnits = await db.select().from(units).where(eq(units.status, 'approved'));
+      const allReviews = await db.select().from(reviews);
+      
+      let enhancedUnits = allUnits.map(u => {
+        const unitReviews = allReviews.filter(r => r.unitId === u.id && r.status === 'approved');
+        return {
+          ...u,
+          reviewCount: unitReviews.length,
+          averageRating: unitReviews.length > 0 ? unitReviews.reduce((acc, r) => acc + r.rating, 0) / unitReviews.length : 0
+        };
+      });
       
       // Filter by category
       if (category) {
-        allUnits = allUnits.filter(u => u.category === category);
+        enhancedUnits = enhancedUnits.filter(u => u.category === category);
       }
       
       // Filter by search
       if (search) {
         const q = search.toLowerCase().trim();
-        allUnits = allUnits.filter(u => 
+        enhancedUnits = enhancedUnits.filter(u => 
           u.name.toLowerCase().includes(q) ||
           (u.description && u.description.toLowerCase().includes(q)) ||
           u.address.toLowerCase().includes(q)
@@ -1030,12 +1050,12 @@ async function startServer() {
       }
       
       // Sort by createdAt descending
-      allUnits.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      enhancedUnits.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
-      const total = allUnits.length;
+      const total = enhancedUnits.length;
       const totalPages = Math.ceil(total / limit);
       const offset = (page - 1) * limit;
-      const data = allUnits.slice(offset, offset + limit);
+      const data = enhancedUnits.slice(offset, offset + limit);
       
       if (req.query.page || req.query.limit || req.query.category || req.query.search) {
         return res.json({
@@ -1049,9 +1069,45 @@ async function startServer() {
         });
       }
       
-      return res.json(allUnits);
+      return res.json(enhancedUnits);
     } catch (err: any) {
       console.error("Error fetching units:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  
+  app.get("/api/admin/units", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (!await getIsAdmin(req.user?.uid || "")) {
+        return res.status(403).json({ error: "شما دسترسی لازم را ندارید." });
+      }
+      let allUnits = await db.select().from(units).orderBy(desc(units.createdAt));
+      const allReviews = await db.select().from(reviews);
+      let enhancedUnits = allUnits.map(u => {
+        const unitReviews = allReviews.filter(r => r.unitId === u.id);
+        return {
+          ...u,
+          reviewCount: unitReviews.length,
+          averageRating: unitReviews.length > 0 ? unitReviews.reduce((acc, r) => acc + r.rating, 0) / unitReviews.length : 0
+        };
+      });
+      return res.json(enhancedUnits);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.put("/api/units/:id/status", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (!await getIsAdmin(req.user?.uid || "")) {
+        return res.status(403).json({ error: "شما دسترسی لازم را ندارید." });
+      }
+      const { id } = req.params;
+      const { status } = req.body;
+      const result = await db.update(units).set({ status }).where(eq(units.id, id)).returning();
+      return res.json(result[0]);
+    } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
   });
@@ -1061,7 +1117,13 @@ async function startServer() {
       const { ownerId } = req.params;
       const result = await db.select().from(units).where(eq(units.ownerId, ownerId));
       if (result.length > 0) {
-        return res.json(result[0]);
+        const unit = result[0];
+        const unitReviews = await db.select().from(reviews).where(and(eq(reviews.unitId, unit.id), eq(reviews.status, 'approved')));
+        return res.json({
+          ...unit,
+          reviewCount: unitReviews.length,
+          averageRating: unitReviews.length > 0 ? unitReviews.reduce((acc, r) => acc + r.rating, 0) / unitReviews.length : 0
+        });
       } else {
         return res.json(null);
       }
@@ -1228,6 +1290,9 @@ async function startServer() {
         }
         if (parentUnit[0].ownerId !== requesterId && !isAdminUser) {
           return res.status(403).json({ error: "شما مجاز به افزودن محصول برای این واحد نیستید." });
+        }
+        if (parentUnit[0].status !== 'approved' && !isAdminUser) {
+          return res.status(403).json({ error: "کارگاه شما هنوز تایید نشده است. امکان افزودن محصول وجود ندارد." });
         }
       }
 
@@ -1551,6 +1616,159 @@ async function startServer() {
     }
   });
 
+  // REST API routes for chat
+  app.post("/api/chat/start", async (req, res) => {
+    try {
+      const { unitId, guestId, guestName, guestPhone } = req.body;
+      
+      // Check if conversation already exists
+      const existing = await db.select().from(conversations)
+        .where(and(eq(conversations.unitId, unitId), eq(conversations.guestId, guestId)));
+        
+      if (existing.length > 0) {
+        return res.json(existing[0]);
+      }
+      
+      const newConv = {
+        id: `conv_${Date.now()}_${Math.random().toString(36).substring(2,7)}`,
+        unitId,
+        guestId,
+        guestName,
+        guestPhone,
+        lastMessageAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      
+      await db.insert(conversations).values(newConv);
+      return res.json(newConv);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/chat/conversations/guest/:guestId", async (req, res) => {
+    try {
+      const { guestId } = req.params;
+      const results = await db.select().from(conversations).where(eq(conversations.guestId, guestId)).orderBy(desc(conversations.lastMessageAt));
+      return res.json(results);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/chat/conversations/unit/:unitId", async (req, res) => {
+    try {
+      const { unitId } = req.params;
+      const results = await db.select().from(conversations).where(eq(conversations.unitId, unitId)).orderBy(desc(conversations.lastMessageAt));
+      return res.json(results);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/chat/messages/:conversationId", async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+      const results = await db.select().from(messages).where(eq(messages.conversationId, conversationId));
+      return res.json(results);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // REST API routes for reviews
+  app.get("/api/units/:id/reviews", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const results = await db.select().from(reviews)
+        .where(and(eq(reviews.unitId, id), eq(reviews.status, 'approved')))
+        .orderBy(desc(reviews.createdAt));
+      return res.json(results);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/units/:id/reviews/all", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const unit = await db.select().from(units).where(eq(units.id, id));
+      if (unit.length === 0 || unit[0].ownerId !== req.user?.uid) {
+        return res.status(403).json({ error: "عدم دسترسی" });
+      }
+      
+      const results = await db.select().from(reviews)
+        .where(eq(reviews.unitId, id))
+        .orderBy(desc(reviews.createdAt));
+      return res.json(results);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.put("/api/units/:id/reviews/:reviewId/status", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { id, reviewId } = req.params;
+      const { status } = req.body; // 'approved' or 'rejected' or 'pending'
+      
+      const unit = await db.select().from(units).where(eq(units.id, id));
+      if (unit.length === 0 || unit[0].ownerId !== req.user?.uid) {
+        return res.status(403).json({ error: "عدم دسترسی" });
+      }
+      
+      await db.update(reviews).set({ status }).where(eq(reviews.id, reviewId));
+      return res.json({ success: true });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/units/:id/reviews/:reviewId", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { id, reviewId } = req.params;
+      
+      const unit = await db.select().from(units).where(eq(units.id, id));
+      if (unit.length === 0 || unit[0].ownerId !== req.user?.uid) {
+        return res.status(403).json({ error: "عدم دسترسی" });
+      }
+      
+      await db.delete(reviews).where(eq(reviews.id, reviewId));
+      return res.json({ success: true });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/units/:id/reviews", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { authorName, rating, comment } = req.body;
+      
+      if (!authorName || !rating || !comment) {
+        return res.status(400).json({ error: "لطفا تمامی فیلدها را پر کنید." });
+      }
+
+      if (rating < 1 || rating > 5) {
+        return res.status(400).json({ error: "امتیاز باید بین ۱ تا ۵ باشد." });
+      }
+
+      const newReview = {
+        id: `rev_${Date.now()}_${Math.random().toString(36).substring(2,7)}`,
+        unitId: id,
+        authorName,
+        rating,
+        comment,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      };
+
+      await db.insert(reviews).values(newReview);
+      return res.json(newReview);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -1566,7 +1784,66 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const httpServer = createServer(app);
+  const io = new Server(httpServer, {
+    cors: { origin: "*" } // Allows the client to connect
+  });
+
+  io.on("connection", (socket) => {
+    // Client will join a room based on conversationId
+    socket.on("join_conversation", (conversationId) => {
+      socket.join(conversationId);
+    });
+
+    socket.on("send_message", async (data) => {
+      try {
+        const { conversationId, sender, content } = data;
+        
+        // Save to database
+        const newMsgId = `msg_${Date.now()}`;
+        const newMsg = {
+          id: newMsgId,
+          conversationId,
+          sender,
+          content,
+          createdAt: new Date().toISOString(),
+          isRead: 'false'
+        };
+        await db.insert(messages).values(newMsg);
+
+        // Update lastMessageAt in conversation
+        await db.update(conversations)
+          .set({ lastMessageAt: newMsg.createdAt })
+          .where(eq(conversations.id, conversationId));
+
+        // Emit to the room
+        io.to(conversationId).emit("receive_message", newMsg);
+      } catch (err) {
+        console.error("Socket error on send_message:", err);
+      }
+    });
+
+    socket.on("mark_read", async (data) => {
+       try {
+         const { conversationId, sender } = data;
+         // Mark messages as read where sender is NOT the current user
+         const msgs = await db.select().from(messages)
+            .where(and(eq(messages.conversationId, conversationId), eq(messages.isRead, 'false')));
+            
+         for (const m of msgs) {
+            if (m.sender !== sender) {
+               await db.update(messages).set({ isRead: 'true' }).where(eq(messages.id, m.id));
+            }
+         }
+       } catch (err) {
+         console.error("Socket error on mark_read", err);
+       }
+    });
+  });
+
+
+
+  httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }

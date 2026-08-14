@@ -110,9 +110,9 @@ export default function ProductForm({
     try {
       await saveProduct(productData);
       onSave();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("خطا در ذخیره اطلاعات محصول.");
+      toast.error(err.message || "خطا در ذخیره اطلاعات محصول.");
     } finally {
       setSavingProduct(false);
     }

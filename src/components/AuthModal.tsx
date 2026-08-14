@@ -445,7 +445,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                         placeholder="مثال: 09123456789"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-left font-bold"
+                        className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-right font-bold"
                       />
                     </div>
                     <span className="text-[9px] text-slate-400 font-medium">کد تایید ورود از طریق پیامک برای این شماره فرستاده خواهد شد.</span>
@@ -578,7 +578,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                             placeholder="مانند: 09123456789"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
-                            className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-left font-semibold"
+                            className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-right font-semibold"
                           />
                         </div>
                       </div>
@@ -596,7 +596,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                         placeholder="name@example.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-left"
+                        className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-right"
                       />
                     </div>
                   </div>
@@ -620,7 +620,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                         placeholder="حداقل ۶ کاراکتر"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-left"
+                        className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-right"
                       />
                     </div>
                   </div>

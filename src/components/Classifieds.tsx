@@ -690,7 +690,7 @@ export default function Classifieds({ user, profile, isAdmin, onOpenAuth }: Clas
                       placeholder="تلفن همراه جهت تماس متقاضیان"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-left font-semibold"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-right font-semibold"
                     />
                   </div>
                 </div>

@@ -315,7 +315,7 @@ export default function BannerManager({ isAdmin, onClose }: BannerManagerProps) 
                   placeholder="مانند: ۰۲۱-۸۸۸۸۸۸۸۸"
                   value={bannerPhone}
                   onChange={(e) => setBannerPhone(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-semibold text-left font-mono"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 transition-all font-semibold text-right font-mono"
                 />
               </div>
 

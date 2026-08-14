@@ -6,61 +6,49 @@ import {
   getProductsByUnit, 
 } from "../../lib/firebaseUtils";
 import BackupRestore from "../BackupRestore";
-import { Loader2, Info } from "lucide-react";
+import { Loader2, Info, LayoutDashboard, Package, MessageSquare, Star, Settings, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { DashboardSkeleton } from "../Skeleton";
 
-import AdminPanel from "./AdminPanel";
-import SmsSettings from "./SmsSettings";
-import BannerManager from "./BannerManager";
 import UnitForm from "./UnitForm";
 import UnitOverview from "./UnitOverview";
 import ProductManager from "./ProductManager";
 import QuotesList from "./QuotesList";
 import PasswordSettings from "./PasswordSettings";
+import ChatManager from "./ChatManager";
+import ReviewManager from "./ReviewManager";
 
 interface DashboardProps {
   user: CustomUser;
   profile: UserProfile | null;
   isAdmin?: boolean;
+  adminSelectedUnitId?: string;
   key?: any;
 }
 
-export default function Dashboard({ user, profile, isAdmin = false }: DashboardProps) {
-  // Admin States
-  const [allUnitsForAdmin, setAllUnitsForAdmin] = useState<Unit[]>([]);
-  const [selectedAdminUnitId, setSelectedAdminUnitId] = useState<string>("");
-
-  // Control toggles
-  const [showSmsSettings, setShowSmsSettings] = useState(false);
-  const [showAdManager, setShowAdManager] = useState(false);
-
+export default function Dashboard({ user, profile, isAdmin = false, adminSelectedUnitId }: DashboardProps) {
   // Unit States
   const [unit, setUnit] = useState<Unit | null>(null);
   const [unitLoading, setUnitLoading] = useState(true);
   const [isEditingUnit, setIsEditingUnit] = useState(false);
 
+  // Dashboard Tabs
+  const [activeTab, setActiveTab] = useState<"overview" | "products" | "quotes" | "chats" | "reviews" | "settings">("overview");
+
+  useEffect(() => {
+    const handleTabChange = (e: any) => setActiveTab(e.detail);
+    window.addEventListener('changeDashboardTab', handleTabChange);
+    return () => window.removeEventListener('changeDashboardTab', handleTabChange);
+  }, []);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('changeDashboardTab', { detail: activeTab }));
+  }, [activeTab]);
+
+
   // Products States
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
-
-  // Load all units for admin selection dropdown
-  const fetchAllUnitsForAdmin = async () => {
-    if (!isAdmin) return;
-    try {
-      const res = await fetch("/api/units");
-      if (res.ok) {
-        const data = await res.json();
-        setAllUnitsForAdmin(data || []);
-      }
-    } catch (err) {
-      console.error("Error fetching units for admin:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchAllUnitsForAdmin();
-  }, [isAdmin]);
 
   // Fetch unit and products
   const fetchUnitAndProducts = async () => {
@@ -68,17 +56,12 @@ export default function Dashboard({ user, profile, isAdmin = false }: DashboardP
       setUnitLoading(true);
       let userUnit: Unit | null = null;
 
-      if (isAdmin && selectedAdminUnitId) {
+      if (isAdmin && adminSelectedUnitId) {
         // Load target unit chosen by admin
-        const found = allUnitsForAdmin.find((u) => u.id === selectedAdminUnitId);
-        if (found) {
-          userUnit = found;
-        } else {
-          const res = await fetch("/api/units");
-          if (res.ok) {
-            const all: Unit[] = await res.json();
-            userUnit = all.find((u) => u.id === selectedAdminUnitId) || null;
-          }
+        const res = await fetch("/api/units");
+        if (res.ok) {
+          const all: Unit[] = await res.json();
+          userUnit = all.find((u) => u.id === adminSelectedUnitId) || null;
         }
       } else {
         // Load current user's registered unit
@@ -104,54 +87,20 @@ export default function Dashboard({ user, profile, isAdmin = false }: DashboardP
 
   useEffect(() => {
     fetchUnitAndProducts();
-  }, [user.uid, profile, selectedAdminUnitId, allUnitsForAdmin.length]);
+  }, [user.uid, profile, adminSelectedUnitId]);
+
+  const tabs = [
+    { id: "overview", label: "اطلاعات کارگاه", icon: LayoutDashboard },
+    { id: "products", label: "محصولات", icon: Package },
+    { id: "quotes", label: "استعلام‌ها", icon: FileText },
+    { id: "chats", label: "پیام‌ها", icon: MessageSquare },
+    { id: "reviews", label: "نظرات", icon: Star },
+    { id: "settings", label: "تنظیمات حساب", icon: Settings },
+  ] as const;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 pb-20">
+    <div className="w-full space-y-8 pb-20">
       
-      {/* Admin Panel Header & Switches */}
-      <AdminPanel
-        isAdmin={isAdmin}
-        allUnitsForAdmin={allUnitsForAdmin}
-        selectedAdminUnitId={selectedAdminUnitId}
-        onSelectAdminUnitId={setSelectedAdminUnitId}
-        currentUnit={unit}
-        onDeleteSuccess={() => {
-          setSelectedAdminUnitId("");
-          fetchAllUnitsForAdmin();
-        }}
-        showAdManager={showAdManager}
-        onToggleAdManager={() => {
-          setShowAdManager(!showAdManager);
-          if (showSmsSettings) setShowSmsSettings(false);
-        }}
-        showSmsSettings={showSmsSettings}
-        onToggleSmsSettings={() => {
-          setShowSmsSettings(!showSmsSettings);
-          if (showAdManager) setShowAdManager(false);
-        }}
-      />
-
-      <AnimatePresence mode="wait">
-        {/* Ad Campaign Manager Panel */}
-        {showAdManager && isAdmin && (
-          <BannerManager 
-            key="ad-manager"
-            isAdmin={isAdmin} 
-            onClose={() => setShowAdManager(false)} 
-          />
-        )}
-
-        {/* SMS Gateway Configurations Panel */}
-        {showSmsSettings && isAdmin && (
-          <SmsSettings 
-            key="sms-settings"
-            isAdmin={isAdmin} 
-            onClose={() => setShowSmsSettings(false)} 
-          />
-        )}
-      </AnimatePresence>
-
       {/* Main Unit Management Content */}
       {unitLoading ? (
         <div className="space-y-4">
@@ -174,7 +123,6 @@ export default function Dashboard({ user, profile, isAdmin = false }: DashboardP
               setUnit(savedUnit);
               setIsEditingUnit(false);
               fetchUnitAndProducts();
-              fetchAllUnitsForAdmin();
             }}
           />
         </div>
@@ -188,50 +136,100 @@ export default function Dashboard({ user, profile, isAdmin = false }: DashboardP
             setUnit(savedUnit);
             setIsEditingUnit(false);
             fetchUnitAndProducts();
-            fetchAllUnitsForAdmin();
           }}
           onCancel={() => setIsEditingUnit(false)}
         />
       ) : (
         /* Default Factory Profile View & Product Manager */
-        <div className="space-y-8">
+        <div className="space-y-6" style={{ direction: "rtl" }}>
           
-          {/* Unit Info Card Overview */}
-          <UnitOverview
-            unit={unit}
-            onEditClick={() => setIsEditingUnit(true)}
-          />
-
-          {/* Product Manager Panel */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sm:p-8">
-            <ProductManager
-              unitId={unit.id}
-              ownerId={unit.ownerId}
-              products={products}
-              productsLoading={productsLoading}
-              onRefreshProducts={fetchUnitAndProducts}
-            />
+          {/* Tabs Navigation */}
+          {/* Tabs Navigation (Hidden on mobile) */}
+          <div className={`${adminSelectedUnitId ? "block" : "hidden md:block"} bg-white rounded-2xl border border-slate-200 p-2 shadow-sm overflow-x-auto hide-scrollbar`}>
+            <div className="flex items-center gap-2 min-w-max">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Received Price Quotes (RFQs) List */}
-          <QuotesList
-            unitId={unit.id}
-            products={products}
-          />
+          {/* Tab Content */}
+          <div className="min-h-[500px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                {activeTab === "overview" && (
+                  <UnitOverview
+                    unit={unit}
+                    onEditClick={() => setIsEditingUnit(true)}
+                  />
+                )}
+
+                {activeTab === "products" && (
+                  <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sm:p-8">
+                    <ProductManager
+                      unitId={unit.id}
+                      ownerId={unit.ownerId}
+                      products={products}
+                      productsLoading={productsLoading}
+                      onRefreshProducts={fetchUnitAndProducts}
+                    />
+                  </div>
+                )}
+
+                {activeTab === "quotes" && (
+                  <QuotesList
+                    unitId={unit.id}
+                    products={products}
+                  />
+                )}
+
+                {activeTab === "chats" && (
+                  <ChatManager unitId={unit.id} unitName={unit.name} />
+                )}
+
+                {activeTab === "reviews" && (
+                  <ReviewManager unitId={unit.id} />
+                )}
+
+                {activeTab === "settings" && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                    <PasswordSettings user={user} />
+                    <BackupRestore
+                      userUid={user.uid}
+                      unit={unit}
+                      products={products}
+                      onRefresh={fetchUnitAndProducts}
+                    />
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
 
         </div>
       )}
-
-      {/* Password settings section (Change or Set password) */}
-      <PasswordSettings user={user} />
-
-      {/* Database Backup & Recovery Panel */}
-      <BackupRestore
-        userUid={user.uid}
-        unit={unit}
-        products={products}
-        onRefresh={fetchUnitAndProducts}
-      />
     </div>
   );
 }

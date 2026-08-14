@@ -19,18 +19,18 @@ export default function CategoryBar({
   };
 
   return (
-    <div className="w-full bg-white border border-slate-100 rounded-2xl p-3 shadow-sm" style={{ direction: "rtl" }}>
-      <div className="flex items-center gap-2 mb-2 px-1 text-slate-500">
+    <div className="w-full bg-white border border-slate-100 rounded-2xl p-2.5 sm:p-3 shadow-sm" style={{ direction: "rtl" }}>
+      <div className="flex items-center gap-1.5 sm:gap-2 mb-2 px-1 text-slate-500">
         <Tag className="h-3.5 w-3.5 text-indigo-500" />
-        <span className="text-[11px] font-bold">آمار صنایع و دسته‌بندی‌ها (فیلتر سریع):</span>
+        <span className="text-[10px] sm:text-[11px] font-bold">آمار صنایع و دسته‌بندی‌ها (فیلتر سریع):</span>
       </div>
       
       {/* Scrollable Row of Category Badges */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
         {/* All Categories Button */}
         <button
           onClick={() => setSelectedCategory("")}
-          className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer border ${
+          className={`shrink-0 flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer border ${
             selectedCategory === ""
               ? "bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-100"
               : "bg-slate-50 hover:bg-slate-100 border-slate-100 text-slate-600"
@@ -54,7 +54,7 @@ export default function CategoryBar({
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(isSelected ? "" : cat.id)}
-              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer border ${
+              className={`shrink-0 flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer border ${
                 isSelected
                   ? "bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-100"
                   : "bg-slate-50 hover:bg-slate-100 border-slate-100 text-slate-600"

@@ -1,6 +1,6 @@
 import React from "react";
 import { Unit, CATEGORIES } from "../types";
-import { Phone, MapPin, ChevronLeft, Factory } from "lucide-react";
+import { Phone, MapPin, ChevronLeft, Factory, Star } from "lucide-react";
 import { motion } from "motion/react";
 
 interface UnitCardProps {
@@ -49,9 +49,17 @@ export default function UnitCard({ unit, onSelect }: UnitCardProps) {
       {/* Main Details */}
       <div className="p-5 flex-1 flex flex-col justify-between">
         <div>
-          <h3 className="font-bold text-lg text-slate-800 line-clamp-1 mb-2 group-hover:text-indigo-600 transition-colors duration-200">
-            {unit.name}
-          </h3>
+          <div className="flex justify-between items-start mb-2">
+            <h3 className="font-bold text-lg text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors duration-200">
+              {unit.name}
+            </h3>
+            {unit.reviewCount ? (
+              <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-md shrink-0">
+                <span className="font-bold text-amber-600 text-xs">{unit.averageRating?.toFixed(1)}</span>
+                <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+              </div>
+            ) : null}
+          </div>
           
           <p className="text-xs text-slate-500 font-normal line-clamp-2 leading-relaxed mb-4">
             {unit.description || "این واحد تولیدی هنوز توضیحی برای کارگاه خود ثبت نکرده است."}

@@ -25,7 +25,10 @@ export const requireAuth = async (
   if (!token) {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith("Bearer ")) {
-      token = authHeader.split("Bearer ")[1]?.trim();
+      const extractedToken = authHeader.split("Bearer ")[1]?.trim();
+      if (extractedToken && extractedToken !== "undefined" && extractedToken !== "null") {
+        token = extractedToken;
+      }
     }
   }
 
