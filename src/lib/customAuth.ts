@@ -45,8 +45,8 @@ class CustomAuthService {
           console.error("Error getting ID token during auth state change:", err);
         }
       } else {
-        // If signed out of Firebase Auth and current session is not OTP (OTP uid has prefix usr_otp_ or starts with phone), clear state.
-        if (this.currentUser && !this.currentUser.uid.startsWith("usr_otp_")) {
+        // If signed out of Firebase Auth and current session is custom (starts with usr_), keep custom session.
+        if (this.currentUser && !this.currentUser.uid.startsWith("usr_")) {
           this.currentUser = null;
           localStorage.removeItem("custom_auth_user");
           this.notifyListeners();
