@@ -7,18 +7,34 @@ dotenv.config();
 
 const Pool = pg.Pool || (pg as any).default?.Pool || pg;
 
-export const createPool = () => {
-  // First priority: Cloud SQL individual variables provided by GCP environment
-  const host = process.env.SQL_HOST || process.env.PGHOST;
-  const user = process.env.SQL_ADMIN_USER || process.env.SQL_USER || process.env.PGUSER;
-  const password = process.env.SQL_ADMIN_PASSWORD || process.env.SQL_PASSWORD || process.env.PGPASSWORD;
-  const database = process.env.SQL_DB_NAME || process.env.SQL_DATABASE || process.env.PGDATABASE;
-  const port = process.env.SQL_PORT ? parseInt(process.env.SQL_PORT, 10) : 5432;
+declare global {
+  var _postgresPool: any | undefined;
+}
 
-  if (host && user && database) {
+export const createPool = () => {
+  if (!global._postgresPool) {
+    const host = process.env.SQL_HOST || process.env.PGHOST || "127.0.0.1";
+    const database = process.env.SQL_DB_NAME || process.env.SQL_DATABASE || process.env.PGDATABASE || "postgres";
+    const port = process.env.SQL_PORT ? parseInt(process.env.SQL_PORT, 10) : 5432;
+
+    // Ensure matching user/password pair
+    let user = process.env.SQL_USER;
+    let password = process.env.SQL_PASSWORD;
+
+    if (!user || !password) {
+      if (process.env.SQL_ADMIN_USER && process.env.SQL_ADMIN_PASSWORD) {
+        user = process.env.SQL_ADMIN_USER;
+        password = process.env.SQL_ADMIN_PASSWORD;
+      } else {
+        user = user || process.env.SQL_ADMIN_USER || process.env.PGUSER || "postgres";
+        password = password || process.env.SQL_ADMIN_PASSWORD || process.env.PGPASSWORD || "";
+      }
+    }
+
     const isSocket = host.startsWith("/");
     const useSsl = process.env.SQL_SSL === "true";
-    return new Pool({
+
+    global._postgresPool = new Pool({
       host,
       user,
       password: password || "",
@@ -29,37 +45,16 @@ export const createPool = () => {
       idleTimeoutMillis: 30000,
       max: 10,
     });
-  }
 
-  // Second priority: DATABASE_URL if explicitly provided
-  if (process.env.DATABASE_URL) {
-    return new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.SQL_SSL === "true" ? { rejectUnauthorized: false } : undefined,
-      connectionTimeoutMillis: 15000,
-      idleTimeoutMillis: 30000,
-      max: 10,
+    global._postgresPool.on("error", (err: any) => {
+      console.error("Unexpected error on idle SQL pool client:", err);
     });
   }
 
-  return new Pool({
-    host: "127.0.0.1",
-    user: "postgres",
-    password: "",
-    database: "postgres",
-    port: 5432,
-    ssl: false,
-    connectionTimeoutMillis: 15000,
-    idleTimeoutMillis: 30000,
-    max: 10,
-  });
+  return global._postgresPool;
 };
 
 const pool = createPool();
-
-pool.on("error", (err) => {
-  console.error("Unexpected error on idle SQL pool client:", err);
-});
 
 export const db = drizzle(pool, { schema });
 

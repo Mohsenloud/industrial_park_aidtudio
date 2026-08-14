@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs";
 import { createServer as createViteServer } from "vite";
 import { db } from "./src/db/index.ts";
 import { users, units, products, banners, settings, classifieds, quotes, otps, smsLogs, conversations, messages, reviews } from "./src/db/schema.ts";
+import { runDatabaseDiagnostics } from "./src/db/diagnostics.ts";
 import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
 import { signToken } from "./src/middleware/tokenUtils.ts";
 import { eq, or, and, desc } from "drizzle-orm";
@@ -85,8 +86,29 @@ async function startServer() {
     }
   }
 
-  // Run the seeder
+  // Run the seeder and database schema diagnostics
   seedBanners();
+  runDatabaseDiagnostics().then((report) => {
+    console.log(`[DB Diagnostics] Status: ${report.status.toUpperCase()} (${report.latencyMs}ms) | DB: ${report.connection.database} | User: ${report.connection.currentUser}`);
+    if (report.summary.errors.length > 0) {
+      console.error("[DB Diagnostics Errors]:", report.summary.errors);
+    }
+    if (report.summary.warnings.length > 0) {
+      console.warn("[DB Diagnostics Warnings]:", report.summary.warnings);
+    }
+  }).catch((err) => {
+    console.error("[DB Diagnostics Failed]:", err);
+  });
+
+  // Diagnostic health endpoint
+  app.get("/api/diagnostics/db", async (req, res) => {
+    try {
+      const report = await runDatabaseDiagnostics();
+      return res.status(report.status === "error" ? 500 : 200).json(report);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || "Failed to run database diagnostics" });
+    }
+  });
 
   // Check if a user is admin
   app.get("/api/users/is-admin/:uid", async (req, res) => {
