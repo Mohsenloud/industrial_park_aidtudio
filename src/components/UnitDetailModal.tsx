@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Unit, Product, CATEGORIES } from "../types";
+import { CheckCircle2 } from "lucide-react";
 import { getProductsByUnit, getAllProducts, getAllUnits } from "../lib/firebaseUtils";
 import { X, Phone, MapPin, Tag, Package, Mail, Calendar, Loader2, Smartphone, Navigation, MessageSquare, Share2, Copy, Check, Layers, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -7,7 +8,6 @@ import { ProductGridSkeleton } from "./Skeleton";
 import toast from "react-hot-toast";
 import { formatPrice } from "../lib/helpers";
 import ChatSystem from "./ChatSystem";
-import UnitReviews from "./UnitReviews";
 
 interface UnitDetailModalProps {
   unit: Unit | null;
@@ -594,9 +594,6 @@ export default function UnitDetailModal({ unit, onClose, onUnitChange }: UnitDet
                 </div>
               )}
             </div>
-
-            {/* Reviews Section */}
-            <UnitReviews unitId={unit.id} />
 
           </div>
         </motion.div>

@@ -60,8 +60,8 @@ export default function Dashboard({ user, profile, isAdmin = false, adminSelecte
         // Load target unit chosen by admin
         const res = await fetch("/api/units");
         if (res.ok) {
-          const all: Unit[] = await res.json();
-          userUnit = all.find((u) => u.id === adminSelectedUnitId) || null;
+          const all: Unit[] = await res.json().catch(() => []);
+          userUnit = (Array.isArray(all) ? all : []).find((u) => u.id === adminSelectedUnitId) || null;
         }
       } else {
         // Load current user's registered unit
@@ -191,6 +191,8 @@ export default function Dashboard({ user, profile, isAdmin = false, adminSelecte
                     <ProductManager
                       unitId={unit.id}
                       ownerId={unit.ownerId}
+                      unitStatus={unit.status}
+                      isAdmin={isAdmin}
                       products={products}
                       productsLoading={productsLoading}
                       onRefreshProducts={fetchUnitAndProducts}

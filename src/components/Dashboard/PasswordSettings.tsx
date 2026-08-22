@@ -36,25 +36,16 @@ export default function PasswordSettings({ user }: PasswordSettingsProps) {
   };
 
   const checkUserPasswordStatus = async () => {
+    if (!user?.uid) return;
     try {
       setChecking(true);
-      // We can query custom endpoint or check if the logged-in user profile has password status
-      const response = await fetch(`/api/units`, {
-        headers: getAuthHeaders()
-      });
-      // Just to verify if the server is responsive under auth
-      // Let's call a specific endpoint or simply see if we can check from current state.
-      // We will also check our user profile status.
-      const userRes = await fetch(`/api/users/is-admin/${user.uid}`);
-      // Let's write a quick check endpoint or default to true/false state.
-      // Wait, let's fetch user's profile from standard API
       const profileRes = await fetch(`/api/users/profile/${user.uid}`, {
         headers: getAuthHeaders()
       });
       if (profileRes.ok) {
-        const data = await profileRes.json();
+        const data = await profileRes.json().catch(() => ({}));
         // If password_hash exists in the users table, they have a password
-        setHasPassword(!!data.hasPassword);
+        setHasPassword(!!data?.hasPassword);
       }
     } catch (err) {
       console.error("Error checking password status:", err);
@@ -93,9 +84,9 @@ export default function PasswordSettings({ user }: PasswordSettingsProps) {
         })
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.error || "خطایی در ثبت کلمه عبور رخ داد.");
+        throw new Error(data?.error || "خطایی در ثبت کلمه عبور رخ داد.");
       }
 
       setSuccess("کلمه عبور شما با موفقیت ثبت و بروزرسانی شد.");

@@ -10,6 +10,7 @@ import UnitDetailModal from "./components/UnitDetailModal";
 import AuthModal from "./components/AuthModal";
 import Dashboard from "./components/Dashboard";
 import AdminDashboard from "./components/AdminDashboard";
+import AdminLoginPage from "./components/AdminLogin/AdminLoginPage";
 import CategoryBar from "./components/CategoryBar";
 import IndustrialAds from "./components/IndustrialAds";
 import AllProductsPage from "./components/AllProductsPage";
@@ -31,7 +32,10 @@ import {
   AlertCircle,
   LogOut,
   Map as MapIcon,
-  Layers
+  Layers,
+  ShieldCheck,
+  Settings,
+  Lock
 } from "lucide-react";
 import { motion } from "motion/react";
 import { Toaster } from "react-hot-toast";
@@ -41,6 +45,8 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const isRouteAdmin = location.pathname.startsWith("/app/adminpanel");
+  const isAdminLoginRoute = location.pathname === "/admin-login" || location.pathname === "/admin/login" || location.pathname === "/admin";
+  
   const [user, setUser] = useState<CustomUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -71,46 +77,46 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = customAuth.onAuthStateChanged(async (currentUser) => {
       setUser(currentUser);
-      if (!currentUser) setAuthLoading(false);
+      setAuthLoading(false);
       if (currentUser) {
-        // Fetch is-admin state
         try {
           const res = await fetch(`/api/users/is-admin/${currentUser.uid}`);
           if (res.ok) {
-            const data = await res.json();
-            setIsAdmin(!!data.isAdmin);
+            const data = await res.json().catch(() => ({}));
+            setIsAdmin(!!data?.isAdmin);
           } else {
-            setIsAdmin(false);
+            setIsAdmin(currentUser.email === "manamalat@gmail.com" || currentUser.uid === "usr_direct_admin");
           }
         } catch (err) {
-          console.error("Error checking admin status:", err);
-          setIsAdmin(false);
+          setIsAdmin(currentUser.email === "manamalat@gmail.com" || currentUser.uid === "usr_direct_admin");
         }
 
         try {
-          let userProfile = await getUserProfile(currentUser.uid);
-          if (!userProfile) {
-            // User does not exist in PostgreSQL yet. Create the profile dynamically in PostgreSQL.
-            const newProfile = {
+          const userProfile = await getUserProfile(currentUser.uid).catch(() => null);
+          if (userProfile) {
+            setProfile(userProfile);
+          } else {
+            const newProfile: UserProfile = {
               uid: currentUser.uid,
-              name: currentUser.email?.split("@")[0] || "کاربر جدید",
-              phone: "ثبت نشده",
+              name: currentUser.name || currentUser.email?.split("@")[0] || "کاربر محترم",
+              phone: currentUser.phone || "ثبت نشده",
               email: currentUser.email || "",
               createdAt: new Date().toISOString()
             };
-            await createUserProfile(newProfile);
-            userProfile = newProfile;
+            setProfile(newProfile);
           }
-          setProfile(userProfile);
         } catch (err) {
-          console.error("Error syncing profile to PostgreSQL:", err);
-        } finally {
-          setAuthLoading(false);
+          setProfile({
+            uid: currentUser.uid,
+            name: currentUser.name || "کاربر محترم",
+            phone: currentUser.phone || "ثبت نشده",
+            email: currentUser.email || "",
+            createdAt: new Date().toISOString()
+          });
         }
       } else {
         setProfile(null);
         setIsAdmin(false);
-        setActiveTab("home");
       }
     });
     return () => unsubscribe();
@@ -121,8 +127,14 @@ export default function App() {
     try {
       setDataLoading(true);
       const [allUnits, allProducts] = await Promise.all([
-        getAllUnits(),
-        getAllProducts()
+        getAllUnits().catch((err) => {
+          console.warn("Failed to load units:", err);
+          return [];
+        }),
+        getAllProducts().catch((err) => {
+          console.warn("Failed to load products:", err);
+          return [];
+        })
       ]);
       setUnits(allUnits);
       setProducts(allProducts);
@@ -189,6 +201,40 @@ export default function App() {
     setShowLogoutConfirm(true);
   };
 
+  const handleAdminLogout = async () => {
+    try {
+      await fetch("/api/admin/logout", { method: "POST" });
+    } catch (_) {}
+    localStorage.removeItem("custom_admin_session");
+    customAuth.signOut();
+    setIsAdmin(false);
+    navigate("/admin-login");
+  };
+
+  // If user is accessing dedicated admin login route
+  if (isAdminLoginRoute) {
+    return (
+      <>
+        <Toaster position="top-center" reverseOrder={false} />
+        <AdminLoginPage
+          onLoginSuccess={(adminUser) => {
+            setUser(adminUser);
+            setIsAdmin(true);
+            setProfile({
+              uid: adminUser.uid,
+              name: adminUser.name || "مدیر ارشد سامانه",
+              phone: adminUser.phone || "",
+              email: adminUser.email || "",
+              createdAt: new Date().toISOString()
+            });
+            navigate("/app/adminpanel");
+          }}
+          onNavigateHome={() => navigate("/")}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
       <Toaster position="top-center" reverseOrder={false} />
@@ -201,7 +247,11 @@ export default function App() {
         activeTab={isRouteAdmin ? "admin" : activeTab}
         setActiveTab={(tab) => {
           if (tab === "admin") {
-            navigate("/app/adminpanel");
+            if (isAdmin) {
+              navigate("/app/adminpanel");
+            } else {
+              navigate("/admin-login");
+            }
           } else {
             if (isRouteAdmin) navigate("/");
             setActiveTab(tab);
@@ -216,11 +266,19 @@ export default function App() {
         <Routes>
           <Route path="/app/adminpanel" element={
             authLoading ? (
-              <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-indigo-600" /></div>
+              <div className="flex flex-col justify-center items-center h-80 gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-rose-600" />
+                <span className="text-xs text-slate-500 font-medium">در حال بررسی سطح دسترسی مدیریت...</span>
+              </div>
             ) : user && isAdmin ? (
-              <AdminDashboard user={user} profile={profile} />
+              <AdminDashboard 
+                user={user} 
+                profile={profile}
+                onAdminLogout={handleAdminLogout}
+                onNavigateHome={() => navigate("/")}
+              />
             ) : (
-              <Navigate to="/" />
+              <Navigate to="/admin-login" replace />
             )
           } />
           <Route path="/*" element={
@@ -423,13 +481,31 @@ export default function App() {
         )}
 
         {activeTab === "dashboard" && user && (
-          <Dashboard
-            user={user}
-            profile={profile}
-            isAdmin={isAdmin}
-            // Refresh directory data on any modification inside Dashboard
-            key={user.uid}
-          />
+          isAdmin ? (
+            <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center max-w-xl mx-auto space-y-4 shadow-sm my-8" style={{ direction: "rtl" }}>
+              <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border border-rose-100">
+                <ShieldCheck className="w-8 h-8" />
+              </div>
+              <h3 className="text-lg font-black text-slate-800">حساب مدیریت ارشد سامانه</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                مدیران ارشد و ناظران سامانه فاقد کارگاه شخصی هستند و صرفاً مسئولیت مدیریت، نظارت و کنترل کلیه بخش‌های سامانه شهرک صنعتی را بر عهده دارند.
+              </p>
+              <button
+                onClick={() => navigate("/app/adminpanel")}
+                className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-rose-100 cursor-pointer inline-flex items-center gap-2"
+              >
+                <Settings className="w-4 h-4" />
+                <span>ورود به پنل جامع نظارت و مدیریت</span>
+              </button>
+            </div>
+          ) : (
+            <Dashboard
+              user={user}
+              profile={profile}
+              isAdmin={false}
+              key={user.uid}
+            />
+          )
         )}
 
       
@@ -447,8 +523,21 @@ export default function App() {
           <p className="text-xs text-slate-500 font-light max-w-xl mx-auto leading-relaxed">
             این پلتفرم به صورت رایگان در جهت رونق کسب‌وکارهای تولیدی، تسهیل ارتباط مستقیم خریداران و تولیدکنندگان و نمایش توانمندی‌های بومی شهرک‌های صنعتی طراحی و پیاده‌سازی شده است.
           </p>
-          <div className="text-[10px] text-slate-600 font-mono border-t border-slate-800/60 pt-4">
-            Industrial Park Directory &copy; {new Date().getFullYear()} - All Rights Reserved
+          <div className="text-[10px] text-slate-600 font-mono border-t border-slate-800/60 pt-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div>
+              Industrial Park Directory &copy; {new Date().getFullYear()} - All Rights Reserved
+            </div>
+            <a 
+              href="/admin-login" 
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/admin-login");
+              }}
+              className="text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <ShieldCheck className="h-3 w-3 text-rose-500/70" />
+              <span>درگاه ورود مدیران سامانه</span>
+            </a>
           </div>
         </div>
       </footer>

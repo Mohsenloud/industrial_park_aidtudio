@@ -22,16 +22,17 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 
 // User profiles
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  if (!uid) return null;
   try {
     const res = await fetch(`/api/users/profile/${uid}`);
     if (!res.ok) {
-      if (res.status === 404) return null;
-      throw new Error(`Failed to fetch profile: ${res.statusText}`);
+      return null;
     }
-    return await res.json();
+    const data = await res.json().catch(() => null);
+    return data;
   } catch (error) {
-    console.error("Error fetching user profile:", error);
-    throw error;
+    console.warn("Notice: getUserProfile fallback:", error);
+    return null;
   }
 }
 
@@ -61,27 +62,30 @@ export async function getAllUnits(): Promise<Unit[]> {
   try {
     const res = await fetch("/api/units");
     if (!res.ok) {
-      throw new Error(`Failed to fetch units: ${res.statusText}`);
+      return [];
     }
-    const units: Unit[] = await res.json();
+    const data = await res.json().catch(() => []);
+    const unitsList: Unit[] = Array.isArray(data) ? data : (data?.data || []);
     // Sort by createdAt descending
-    return units.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return unitsList.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   } catch (error) {
-    console.error("Error getting units:", error);
-    throw error;
+    console.warn("Notice: getAllUnits fallback to empty list:", error);
+    return [];
   }
 }
 
 export async function getUnitByOwner(ownerId: string): Promise<Unit | null> {
+  if (!ownerId) return null;
   try {
     const res = await fetch(`/api/units/owner/${ownerId}`);
     if (!res.ok) {
-      throw new Error(`Failed to fetch unit by owner: ${res.statusText}`);
+      return null;
     }
-    return await res.json();
+    const data = await res.json().catch(() => null);
+    return data;
   } catch (error) {
-    console.error("Error getting unit by owner:", error);
-    throw error;
+    console.warn("Notice: getUnitByOwner fallback to null:", error);
+    return null;
   }
 }
 
@@ -111,27 +115,30 @@ export async function getAllProducts(): Promise<Product[]> {
   try {
     const res = await fetch("/api/products");
     if (!res.ok) {
-      throw new Error(`Failed to fetch products: ${res.statusText}`);
+      return [];
     }
-    const products: Product[] = await res.json();
-    return products.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const data = await res.json().catch(() => []);
+    const productsList: Product[] = Array.isArray(data) ? data : (data?.data || []);
+    return productsList.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   } catch (error) {
-    console.error("Error getting products:", error);
-    throw error;
+    console.warn("Notice: getAllProducts fallback to empty list:", error);
+    return [];
   }
 }
 
 export async function getProductsByUnit(unitId: string): Promise<Product[]> {
+  if (!unitId) return [];
   try {
     const res = await fetch(`/api/products/unit/${unitId}`);
     if (!res.ok) {
-      throw new Error(`Failed to fetch unit products: ${res.statusText}`);
+      return [];
     }
-    const products: Product[] = await res.json();
-    return products.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const data = await res.json().catch(() => []);
+    const productsList: Product[] = Array.isArray(data) ? data : (data?.data || []);
+    return productsList.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   } catch (error) {
-    console.error("Error getting products for unit:", error);
-    throw error;
+    console.warn("Notice: getProductsByUnit fallback:", error);
+    return [];
   }
 }
 
@@ -171,6 +178,25 @@ export async function deleteProduct(productId: string): Promise<void> {
     }
   } catch (error) {
     console.error("Error deleting product:", error);
+    throw error;
+  }
+}
+
+export async function deleteUnit(unitId: string): Promise<void> {
+  try {
+    const authHeaders = await getAuthHeaders();
+    const res = await fetch(`/api/units/${unitId}`, {
+      method: "DELETE",
+      headers: {
+        ...authHeaders
+      }
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(errData.error || "خطا در حذف کارگاه");
+    }
+  } catch (error) {
+    console.error("Error deleting unit:", error);
     throw error;
   }
 }

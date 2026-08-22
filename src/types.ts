@@ -29,6 +29,14 @@ export interface Unit {
   updatedAt: string;
   averageRating?: number;
   reviewCount?: number;
+  ownerUser?: {
+    uid: string;
+    name: string;
+    phone: string;
+    email: string;
+    createdAt?: string;
+    lastLoginAt?: string;
+  } | null;
 }
 
 export interface Product {
@@ -48,11 +56,37 @@ export interface BannerAd {
   id: string;
   companyName: string;
   title: string;
+  subtitle?: string; // شعار یا عنوان فرعی
   description: string;
-  image: string;
-  badge: string;
-  phone: string;
+  image: string; // تصویر پس‌زمینه
+  logo?: string; // لوگوی شرکت / حامی
+  badge: string; // متن برچسب
+  badgeColor?: 'amber' | 'emerald' | 'indigo' | 'rose' | 'violet' | 'cyan' | 'slate'; // رنگ برچسب
+  phone: string; // تلفن تماس
+  mobile?: string; // شماره همراه / واتساپ
+  linkUrl?: string; // آدرس وب‌سایت یا کاتالوگ
+  linkText?: string; // متن دکمه اقدام (CTA)
+  themeColor?: 'dark' | 'navy' | 'emerald' | 'amber' | 'carbon'; // تم پس‌زمینه
+  overlayOpacity?: 'light' | 'medium' | 'heavy'; // شدت گرادیان تیره روی تصویر
+  status?: 'active' | 'inactive'; // وضعیت انتشار
+  priority?: number; // اولویت نمایش (۱ بالاترین)
+  placement?: 'hero_slider' | 'middle_section' | 'sidebar'; // جایگاه نمایش
+  expiresAt?: string; // تاریخ انقضا
   createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  userId?: string | null;
+  unitId?: string | null;
+  action: 'login' | 'unit_created' | 'unit_updated' | 'status_changed' | 'product_added' | 'product_updated' | 'product_deleted' | 'classified_added' | 'quote_received' | 'review_added' | 'admin_note' | string;
+  title: string;
+  description?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  performedBy?: 'user' | 'admin' | 'system';
+  createdAt: string;
 }
 
 export const CATEGORIES = [

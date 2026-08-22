@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # The Web Application
+  app:
+    build: .
+    container_name: industrial_park_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      # Important: In docker-compose, the app connects to the database via the service name ('postgres')
+      - DATABASE_URL=postgresql://industrial_admin:super_secret_password@postgres:5432/industrial_park
+    depends_on:
+      - postgres
+    networks:
+      - internal_network
+
+  # The PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: industrial_park_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=industrial_admin
+      - POSTGRES_PASSWORD=super_secret_password
+      - POSTGRES_DB=industrial_park
+    volumes:
+      # This volume maps the database files to your linux server so data isn't lost when container stops
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal_network
+
+volumes:
+  postgres_data:
+
+networks:
+  internal_network:
+    driver: bridge

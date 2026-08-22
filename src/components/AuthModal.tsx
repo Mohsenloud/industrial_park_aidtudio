@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { customAuth } from "../lib/customAuth";
-import { X, Mail, Lock, User, Phone, Eye, EyeOff, Loader2, KeyRound, ShieldCheck, RefreshCw, ChevronLeft, AlertCircle } from "lucide-react";
+import { customAuth, CustomAuthError } from "../lib/customAuth";
+import { X, Mail, Lock, User, Phone, Eye, EyeOff, Loader2, KeyRound, ShieldCheck, RefreshCw, ChevronLeft, AlertCircle, Terminal, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import toast from "react-hot-toast";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -38,6 +39,14 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [detailedError, setDetailedError] = useState<{
+    code?: string;
+    message?: string;
+    details?: any;
+    raw?: any;
+  } | null>(null);
+  const [showErrorDetails, setShowErrorDetails] = useState(false);
+  const [copiedError, setCopiedError] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
 
   // Countdown timer effect for SMS
@@ -139,6 +148,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
     } catch (err: any) {
       console.error(err);
       setError(err.message || "خطا در ارسال کد تایید. مجدداً تلاش کنید.");
+      setDetailedError({
+        code: err instanceof CustomAuthError ? err.debugCode : "SEND_OTP_FAIL",
+        message: err.message,
+        details: err instanceof CustomAuthError ? err.details : err.stack,
+        raw: err instanceof CustomAuthError ? err.rawResponse : undefined
+      });
     } finally {
       setLoading(false);
     }
@@ -148,6 +163,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setDetailedError(null);
     setSuccessMsg("");
 
     const cleanCode = otpCode.trim();
@@ -164,6 +180,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
     } catch (err: any) {
       console.error(err);
       setError(err.message || "کد تایید اشتباه یا منقضی شده است.");
+      setDetailedError({
+        code: err instanceof CustomAuthError ? err.debugCode : "VERIFY_OTP_FAIL",
+        message: err.message,
+        details: err instanceof CustomAuthError ? err.details : err.stack,
+        raw: err instanceof CustomAuthError ? err.rawResponse : undefined
+      });
     } finally {
       setLoading(false);
     }
@@ -173,6 +195,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setDetailedError(null);
     setSuccessMsg("");
 
     if (mode === "signup") {
@@ -209,6 +232,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
         } catch (err: any) {
           console.error(err);
           setError(err.message || "خطا در ارسال ایمیل تایید. لطفاً آدرس ایمیل را مجدداً بررسی کنید.");
+          setDetailedError({
+            code: err instanceof CustomAuthError ? err.debugCode : "SEND_EMAIL_OTP_FAIL",
+            message: err.message,
+            details: err instanceof CustomAuthError ? err.details : err.stack,
+            raw: err instanceof CustomAuthError ? err.rawResponse : undefined
+          });
         } finally {
           setLoading(false);
         }
@@ -229,6 +258,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
         } catch (err: any) {
           console.error(err);
           setError(err.message || "کد تایید ایمیل نادرست یا منقضی شده است.");
+          setDetailedError({
+            code: err instanceof CustomAuthError ? err.debugCode : "SIGNUP_FAIL",
+            message: err.message,
+            details: err instanceof CustomAuthError ? err.details : err.stack,
+            raw: err instanceof CustomAuthError ? err.rawResponse : undefined
+          });
         } finally {
           setLoading(false);
         }
@@ -255,6 +290,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
         } catch (err: any) {
           console.error(err);
           setError(err.message || "خطا در ارسال کد تایید به ایمیل.");
+          setDetailedError({
+            code: err instanceof CustomAuthError ? err.debugCode : "SEND_EMAIL_OTP_FAIL",
+            message: err.message,
+            details: err instanceof CustomAuthError ? err.details : err.stack,
+            raw: err instanceof CustomAuthError ? err.rawResponse : undefined
+          });
         } finally {
           setLoading(false);
         }
@@ -278,6 +319,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
         } catch (err: any) {
           console.error(err);
           setError(err.message || "کد تایید اشتباه یا منقضی شده است.");
+          setDetailedError({
+            code: err instanceof CustomAuthError ? err.debugCode : "RESET_PASSWORD_FAIL",
+            message: err.message,
+            details: err instanceof CustomAuthError ? err.details : err.stack,
+            raw: err instanceof CustomAuthError ? err.rawResponse : undefined
+          });
         } finally {
           setLoading(false);
         }
@@ -307,6 +354,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
       } catch (err: any) {
         console.error(err);
         setError(err.message || "ایمیل یا کلمه عبور اشتباه است.");
+        setDetailedError({
+          code: err instanceof CustomAuthError ? err.debugCode : "SIGNIN_FAIL",
+          message: err.message,
+          details: err instanceof CustomAuthError ? err.details : err.stack,
+          raw: err instanceof CustomAuthError ? err.rawResponse : undefined
+        });
       } finally {
         setLoading(false);
       }
@@ -464,21 +517,93 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
           )}
 
           {/* Message Area */}
-          <div className="px-6 pt-4">
+          <div className="px-6 pt-4 space-y-2">
             {error && (
-              <div className="p-3 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl text-xs font-semibold leading-relaxed flex flex-col gap-2">
-                <div>{error}</div>
-                {error.includes("کد یکبار مصرف") && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthMethod("otp");
-                      setError("");
-                    }}
-                    className="mt-1 text-xs text-indigo-600 hover:text-indigo-800 font-extrabold flex items-center gap-1 self-start cursor-pointer border-b border-indigo-100 pb-0.5"
-                  >
-                    <span>← ورود با کد یکبار مصرف پیامکی (OTP)</span>
-                  </button>
+              <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl text-xs font-semibold leading-relaxed flex flex-col gap-2.5 shadow-xs">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex-1 font-bold">{error}</div>
+                </div>
+
+                {(error.includes("کد یکبار مصرف") || error.includes("رمز عبور ندارد")) && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMethod("otp");
+                        setError("");
+                        setDetailedError(null);
+                      }}
+                      className="text-xs px-2.5 py-1.5 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200 rounded-xl font-black flex items-center gap-1 cursor-pointer transition-all shadow-2xs"
+                    >
+                      <span>← ورود با کد یکبار مصرف پیامکی (OTP)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("forgot");
+                        setEmailOtpStep(1);
+                        setError("");
+                        setDetailedError(null);
+                      }}
+                      className="text-xs px-2.5 py-1.5 bg-white text-amber-700 hover:bg-amber-50 border border-amber-200 rounded-xl font-black flex items-center gap-1 cursor-pointer transition-all shadow-2xs"
+                    >
+                      <span>🔑 تعیین یا تغییر رمز عبور</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Detailed Error Inspector Toggle & Full Code View */}
+                {detailedError && (
+                  <div className="pt-2 border-t border-rose-200/70">
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowErrorDetails(!showErrorDetails)}
+                        className="text-[11px] text-rose-800 hover:text-rose-950 font-black flex items-center gap-1 cursor-pointer"
+                      >
+                        <Terminal className="h-3.5 w-3.5 text-rose-600" />
+                        <span>{showErrorDetails ? "بستن جزئیات فنی و کد خطا" : "مشاهده کد کامل و جزئیات فنی خطا"}</span>
+                        {showErrorDetails ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const fullErrorText = `Error Code: ${detailedError.code || "UNKNOWN"}\nMessage: ${detailedError.message || error}\nDetails: ${JSON.stringify(detailedError.details || detailedError.raw || {}, null, 2)}`;
+                          navigator.clipboard.writeText(fullErrorText);
+                          setCopiedError(true);
+                          toast.success("کد و متن کامل خطا در حافظه کپی شد");
+                          setTimeout(() => setCopiedError(false), 2000);
+                        }}
+                        className="text-[11px] px-2 py-1 bg-white hover:bg-rose-100/50 text-rose-800 border border-rose-200 rounded-lg flex items-center gap-1 cursor-pointer transition-colors font-bold"
+                        title="کپی متن کامل خطا"
+                      >
+                        {copiedError ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                        <span>{copiedError ? "کپی شد" : "کپی کد خطا"}</span>
+                      </button>
+                    </div>
+
+                    {showErrorDetails && (
+                      <div className="mt-2 p-2.5 bg-slate-950 text-rose-300 rounded-xl font-mono text-[11px] leading-relaxed overflow-x-auto space-y-1.5 text-left border border-slate-800" dir="ltr">
+                        <div className="text-amber-400 font-bold">
+                          [ERROR_CODE]: {detailedError.code || "N/A"}
+                        </div>
+                        {detailedError.details && (
+                          <div className="text-slate-300 whitespace-pre-wrap break-all">
+                            {typeof detailedError.details === "string" 
+                              ? detailedError.details 
+                              : JSON.stringify(detailedError.details, null, 2)}
+                          </div>
+                        )}
+                        {detailedError.raw && (
+                          <div className="text-slate-400 text-[10px] whitespace-pre-wrap border-t border-slate-800 pt-1">
+                            {JSON.stringify(detailedError.raw, null, 2)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -578,13 +703,24 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                   </div>
 
                   {simulatedCode && (
-                    <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-2xl text-amber-800 text-[10px] font-bold space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-600" />
-                        <span>شبیه‌ساز پیامک صنعتی (محیط توسعه):</span>
+                    <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-2xl text-amber-800 text-[11px] font-bold space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                          <span>کد تایید پیامکی (شبیه‌سازی سیستم):</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOtpCode(simulatedCode);
+                          }}
+                          className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-black cursor-pointer shadow-xs transition-colors"
+                        >
+                          درج خودکار کد
+                        </button>
                       </div>
                       <p className="leading-relaxed">
-                        کد تایید ارسال شده برای شما: <strong className="font-mono text-xs bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-200">{simulatedCode}</strong> می‌باشد. جهت ورود می‌توانید این کد را وارد کنید.
+                        کد تایید شما: <strong className="font-mono text-xs bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300">{simulatedCode}</strong> می‌باشد.
                       </p>
                     </div>
                   )}
@@ -800,13 +936,24 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                   )}
 
                   {emailSimulatedCode && (
-                    <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-2xl text-amber-800 text-[10px] font-bold space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-600" />
-                        <span>شبیه‌ساز ایمیل صنعتی (محیط توسعه):</span>
+                    <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-2xl text-amber-800 text-[11px] font-bold space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                          <span>کد تایید ایمیل (شبیه‌سازی سیستم):</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEmailOtpCode(emailSimulatedCode);
+                          }}
+                          className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-black cursor-pointer shadow-xs transition-colors"
+                        >
+                          درج خودکار کد
+                        </button>
                       </div>
                       <p className="leading-relaxed">
-                        کد تایید ارسال شده به ایمیل شما: <strong className="font-mono text-xs bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-200">{emailSimulatedCode}</strong> می‌باشد. جهت ثبت‌نام/ورود می‌توانید این کد را وارد کنید.
+                        کد تایید شما: <strong className="font-mono text-xs bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300">{emailSimulatedCode}</strong> می‌باشد.
                       </p>
                     </div>
                   )}

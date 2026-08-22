@@ -1,7 +1,7 @@
-import { pgTable, text, doublePrecision, integer } from "drizzle-orm/pg-core";
+import { sqliteTable, text, real, integer } from "drizzle-orm/sqlite-core";
 
 // Users table (maps Firebase UID to other profile details)
-export const users = pgTable("users", {
+export const users = sqliteTable("users", {
   uid: text("uid").primaryKey(),
   name: text("name").notNull(),
   phone: text("phone").notNull(),
@@ -12,7 +12,7 @@ export const users = pgTable("users", {
 });
 
 // Units table (stores workshops/manufacturing units)
-export const units = pgTable("units", {
+export const units = sqliteTable("units", {
   id: text("id").primaryKey(),
   ownerId: text("owner_id").notNull(),
   name: text("name").notNull(),
@@ -23,8 +23,8 @@ export const units = pgTable("units", {
   description: text("description").notNull(),
   category: text("category").notNull(),
   profileImage: text("profile_image").notNull(),
-  latitude: doublePrecision("latitude"),
-  longitude: doublePrecision("longitude"),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
   mapUrl: text("map_url"),
   seoKeywords: text("seo_keywords"),
   seoDescription: text("seo_description"),
@@ -36,7 +36,7 @@ export const units = pgTable("units", {
 });
 
 // Products table (stores products of the units)
-export const products = pgTable("products", {
+export const products = sqliteTable("products", {
   id: text("id").primaryKey(),
   unitId: text("unit_id").notNull(),
   ownerId: text("owner_id").notNull(),
@@ -50,39 +50,26 @@ export const products = pgTable("products", {
 });
 
 // Banners table (stores promotional ad banners)
-export const banners = pgTable("banners", {
+export const banners = sqliteTable("banners", {
   id: text("id").primaryKey(),
   companyName: text("company_name").notNull(),
   title: text("title").notNull(),
-  subtitle: text("subtitle"),
   description: text("description").notNull(),
   image: text("image").notNull(),
-  logo: text("logo"),
   badge: text("badge").notNull(),
-  badgeColor: text("badge_color"),
   phone: text("phone").notNull(),
-  mobile: text("mobile"),
-  linkUrl: text("link_url"),
-  linkText: text("link_text"),
-  themeColor: text("theme_color"),
-  overlayOpacity: text("overlay_opacity"),
-  status: text("status"),
-  priority: text("priority"),
-  placement: text("placement"),
-  expiresAt: text("expires_at"),
   createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at"),
 });
 
 // Settings table (stores dynamic configurations such as SMS gateways)
-export const settings = pgTable("settings", {
+export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
 
 // Classifieds table (Classifieds, Job Board & Industrial Real Estate)
-export const classifieds = pgTable("classifieds", {
+export const classifieds = sqliteTable("classifieds", {
   id: text("id").primaryKey(),
   ownerId: text("owner_id").notNull(),
   type: text("type").notNull(), // 'job' | 'real_estate' | 'classified'
@@ -97,7 +84,7 @@ export const classifieds = pgTable("classifieds", {
 });
 
 // Quotes table (Request for Quote)
-export const quotes = pgTable("quotes", {
+export const quotes = sqliteTable("quotes", {
   id: text("id").primaryKey(),
   productId: text("product_id").notNull(),
   unitId: text("unit_id").notNull(),
@@ -110,14 +97,14 @@ export const quotes = pgTable("quotes", {
 });
 
 // OTP codes table (persists active OTP codes for verification)
-export const otps = pgTable("otps", {
+export const otps = sqliteTable("otps", {
   phone: text("phone").primaryKey(),
   code: text("code").notNull(),
-  expiresAt: doublePrecision("expires_at").notNull(),
+  expiresAt: real("expires_at").notNull(),
 });
 
 // SMS Logs table (stores a history of sent SMS messages/OTPs)
-export const smsLogs = pgTable("sms_logs", {
+export const smsLogs = sqliteTable("sms_logs", {
   id: text("id").primaryKey(),
   phone: text("phone").notNull(),
   code: text("code").notNull(),
@@ -128,7 +115,7 @@ export const smsLogs = pgTable("sms_logs", {
 });
 
 // Chat Conversations
-export const conversations = pgTable("conversations", {
+export const conversations = sqliteTable("conversations", {
   id: text("id").primaryKey(),
   unitId: text("unit_id").notNull(),
   guestId: text("guest_id").notNull(),
@@ -139,7 +126,7 @@ export const conversations = pgTable("conversations", {
 });
 
 // Chat Messages
-export const messages = pgTable("messages", {
+export const messages = sqliteTable("messages", {
   id: text("id").primaryKey(),
   conversationId: text("conversation_id").notNull(),
   sender: text("sender").notNull(), // 'guest' | 'owner'
@@ -149,7 +136,7 @@ export const messages = pgTable("messages", {
 });
 
 // Reviews and Ratings
-export const reviews = pgTable("reviews", {
+export const reviews = sqliteTable("reviews", {
   id: text("id").primaryKey(),
   unitId: text("unit_id").notNull(),
   authorName: text("author_name").notNull(),
@@ -158,18 +145,3 @@ export const reviews = pgTable("reviews", {
   status: text("status").notNull().default("approved"), // 'pending', 'approved', 'rejected'
   createdAt: text("created_at").notNull(),
 });
-
-// Activity and Audit Logs (Stores activity history for users, workshops and admin operations)
-export const activityLogs = pgTable("activity_logs", {
-  id: text("id").primaryKey(),
-  userId: text("user_id"),
-  unitId: text("unit_id"),
-  action: text("action").notNull(),
-  title: text("title").notNull(),
-  description: text("description"),
-  ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
-  performedBy: text("performed_by"),
-  createdAt: text("created_at").notNull(),
-});
-

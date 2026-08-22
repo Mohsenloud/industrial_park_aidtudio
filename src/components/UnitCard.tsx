@@ -1,6 +1,6 @@
 import React from "react";
 import { Unit, CATEGORIES } from "../types";
-import { Phone, MapPin, ChevronLeft, Factory, Star } from "lucide-react";
+import { Phone, MapPin, ChevronLeft, Factory, Star, CheckCircle2 } from "lucide-react";
 import { motion } from "motion/react";
 
 interface UnitCardProps {
@@ -50,8 +50,9 @@ export default function UnitCard({ unit, onSelect }: UnitCardProps) {
       <div className="p-5 flex-1 flex flex-col justify-between">
         <div>
           <div className="flex justify-between items-start mb-2">
-            <h3 className="font-bold text-lg text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors duration-200">
+            <h3 className="font-bold text-lg text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors duration-200 flex items-center gap-1.5">
               {unit.name}
+              {unit.status === "approved" && <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" title="تایید شده" />}
             </h3>
             {unit.reviewCount ? (
               <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-md shrink-0">

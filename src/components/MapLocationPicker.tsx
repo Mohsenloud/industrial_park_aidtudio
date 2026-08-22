@@ -69,19 +69,16 @@ export default function MapLocationPicker({
   // Custom Leaflet Pin Icon
   const createPinIcon = () => {
     const iconHtml = `
-      <div class="relative flex items-center justify-center cursor-move group">
-        <div class="w-10 h-10 rounded-2xl bg-indigo-600 border-2 border-white shadow-xl flex items-center justify-center text-white transform -translate-y-2 transition-transform group-hover:scale-110 animate-bounce">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <div style="position: relative; display: flex; align-items: center; justify-content: center; cursor: move; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+        <div style="width: 40px; height: 40px; border-radius: 50% 50% 50% 0; background: #4f46e5; border: 2px solid white; display: flex; align-items: center; justify-content: center; transform: rotate(-45deg);">
+          <svg xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; color: white; transform: rotate(45deg);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
           </svg>
         </div>
-        <div class="absolute -bottom-0.5 w-2.5 h-2.5 bg-indigo-600 rotate-45 border-r-2 border-b-2 border-white"></div>
-        <div class="absolute -bottom-4 w-4 h-1.5 bg-slate-900/40 rounded-full blur-[1px]"></div>
       </div>
     `;
-
     return L.divIcon({
-      className: "custom-picker-pin",
+      className: "custom-picker-pin bg-transparent border-0",
       html: iconHtml,
       iconSize: [40, 48],
       iconAnchor: [20, 48],
@@ -90,6 +87,11 @@ export default function MapLocationPicker({
   };
 
   // Initialize Map
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
@@ -118,7 +120,7 @@ export default function MapLocationPicker({
     map.on("click", (e: L.LeafletMouseEvent) => {
       const lat = parseFloat(e.latlng.lat.toFixed(6));
       const lng = parseFloat(e.latlng.lng.toFixed(6));
-      onChange(lat, lng);
+      onChangeRef.current(lat, lng);
     });
 
     mapInstanceRef.current = map;
@@ -130,6 +132,7 @@ export default function MapLocationPicker({
         console.error("Map remove cleanup error:", err);
       }
       mapInstanceRef.current = null;
+      markerRef.current = null;
     };
   }, []);
 

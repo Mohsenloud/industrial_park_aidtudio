@@ -4,17 +4,23 @@ import {
   Plus, 
   Loader2, 
   Edit3, 
-  Trash2 
+  Trash2,
+  Lock,
+  Clock,
+  AlertTriangle
 } from "lucide-react";
 import { motion } from "motion/react";
 import { Product } from "../../types";
 import { formatPrice } from "../../lib/helpers";
 import { deleteProduct } from "../../lib/firebaseUtils";
 import ProductForm from "./ProductForm";
+import toast from "react-hot-toast";
 
 interface ProductManagerProps {
   unitId: string;
   ownerId: string;
+  unitStatus?: "approved" | "pending" | "rejected";
+  isAdmin?: boolean;
   products: Product[];
   productsLoading: boolean;
   onRefreshProducts: () => void;
@@ -23,6 +29,8 @@ interface ProductManagerProps {
 export default function ProductManager({
   unitId,
   ownerId,
+  unitStatus = "approved",
+  isAdmin = false,
   products,
   productsLoading,
   onRefreshProducts,
@@ -31,12 +39,31 @@ export default function ProductManager({
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
 
+  const isLocked = !isAdmin && unitStatus !== "approved";
+
   const handleDeleteProductClick = (productId: string) => {
+    if (isLocked) {
+      toast.error("امکان ویرایش یا حذف محصولات نیازمند تایید کارگاه توسط مدیر است.");
+      return;
+    }
     setProductToDelete(productId);
   };
 
   const handleEditProductClick = (prod: Product) => {
+    if (isLocked) {
+      toast.error("امکان ویرایش محصولات نیازمند تایید کارگاه توسط مدیر است.");
+      return;
+    }
     setEditingProduct(prod);
+    setIsAddingProduct(true);
+  };
+
+  const handleAddClick = () => {
+    if (isLocked) {
+      toast.error("کارگاه شما هنوز توسط مدیریت تایید نشده است. پس از تایید مدیر، امکان افزودن محصول فعال خواهد شد.");
+      return;
+    }
+    setEditingProduct(null);
     setIsAddingProduct(true);
   };
 
@@ -47,7 +74,20 @@ export default function ProductManager({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={{ direction: "rtl" }}>
+      {/* Unit Status Warning if not approved */}
+      {isLocked && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-950 p-4 rounded-2xl text-xs font-semibold leading-relaxed flex items-start gap-3 shadow-sm">
+          <Clock className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-bold text-sm text-amber-900">امکان ثبت و مدیریت محصولات غیرفعال است (در انتظار تایید مدیر)</p>
+            <p className="text-amber-800 leading-normal">
+              اطلاعات کارگاه شما ثبت گردیده و در صف بررسی توسط مدیریت سامانه قرار دارد. پس از تایید توسط مدیر، می‌توانید محصولات تولیدی خود را ثبت نمایید.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Package className="h-5 w-5 text-indigo-600" />
@@ -56,13 +96,15 @@ export default function ProductManager({
         
         {!isAddingProduct && (
           <button
-            onClick={() => {
-              setEditingProduct(null);
-              setIsAddingProduct(true);
-            }}
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md shadow-indigo-50 hover:shadow-lg transition-all duration-200 cursor-pointer"
+            onClick={handleAddClick}
+            disabled={isLocked}
+            className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+              isLocked 
+                ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed" 
+                : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-50 hover:shadow-lg cursor-pointer"
+            }`}
           >
-            <Plus className="h-4 w-4" />
+            {isLocked ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
             <span>افزودن محصول جدید</span>
           </button>
         )}

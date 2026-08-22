@@ -25,15 +25,21 @@ export default function UnitReviews({ unitId }: UnitReviewsProps) {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchReviews();
+    if (unitId) {
+      fetchReviews();
+    } else {
+      setLoading(false);
+      setReviews([]);
+    }
   }, [unitId]);
 
   const fetchReviews = async () => {
+    if (!unitId) return;
     try {
       const res = await fetch(`/api/units/${unitId}/reviews`);
       if (res.ok) {
-        const data = await res.json();
-        setReviews(data);
+        const data = await res.json().catch(() => []);
+        setReviews(Array.isArray(data) ? data : []);
       } else {
         console.error("Failed to fetch reviews", res.status);
       }
@@ -185,8 +191,8 @@ export default function UnitReviews({ unitId }: UnitReviewsProps) {
                 هنوز نظری برای این واحد ثبت نشده است.<br/>شما اولین نفر باشید!
               </div>
             ) : (
-              reviews.map((rev) => (
-                <div key={rev.id} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+              reviews.map((rev, idx) => (
+                <div key={`${rev.id}-${idx}`} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
                   <div className="flex justify-between items-start mb-2">
                     <div className="font-bold text-sm text-slate-800">{rev.authorName}</div>
                     <div className="flex text-amber-400">

@@ -28,14 +28,15 @@ export default function QuotesList({ unitId, products }: QuotesListProps) {
   };
 
   const fetchReceivedQuotes = async () => {
+    if (!unitId) return;
     try {
       setQuotesLoading(true);
       const res = await fetch(`/api/quotes/unit/${unitId}`, { 
         headers: getHeaders() 
       });
       if (res.ok) {
-        const data = await res.json();
-        const sorted = (data || []).sort(
+        const data = await res.json().catch(() => []);
+        const sorted = (Array.isArray(data) ? data : []).sort(
           (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         setReceivedQuotes(sorted);

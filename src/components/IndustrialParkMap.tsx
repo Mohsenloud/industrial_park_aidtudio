@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Unit, CATEGORIES } from "../types";
+import { CheckCircle2 } from "lucide-react";
 import { 
   MapPin, 
   Navigation, 
@@ -467,13 +468,13 @@ export default function IndustrialParkMap({ units, onSelectUnit, selectedUnitId 
                   <p className="text-xs font-semibold">هیچ کارگاهی مطابق فیلتر یافت نشد</p>
                 </div>
               ) : (
-                filteredUnits.map((u) => {
+                filteredUnits.map((u, idx) => {
                   const isCurrent = activeUnit?.id === u.id;
                   const catConfig = CATEGORY_COLORS[u.category] || CATEGORY_COLORS.others;
 
                   return (
                     <div
-                      key={u.id}
+                      key={`${u.id}-${idx}`}
                       onClick={() => handleFlyToUnit(u)}
                       className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center gap-3 ${
                         isCurrent
@@ -493,7 +494,10 @@ export default function IndustrialParkMap({ units, onSelectUnit, selectedUnitId 
                       {/* Details */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
-                          <h4 className="font-bold text-xs text-slate-800 truncate">{u.name}</h4>
+                          <h4 className="font-bold text-xs text-slate-800 truncate flex items-center gap-1">
+                            {u.name}
+                            {u.status === "approved" && <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" title="تایید شده" />}
+                          </h4>
                           <span 
                             className="w-2 h-2 rounded-full shrink-0" 
                             style={{ backgroundColor: catConfig.hex }}

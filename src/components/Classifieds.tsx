@@ -224,7 +224,7 @@ export default function Classifieds({ user, profile, isAdmin, onOpenAuth }: Clas
         setImage("");
         fetchAds();
       } else {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({ error: "خطا در ثبت آگهی." }));
         toast.error(err.error || "خطا در ثبت آگهی.");
       }
     } catch (err) {

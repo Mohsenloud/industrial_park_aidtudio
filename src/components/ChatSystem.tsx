@@ -52,19 +52,32 @@ export default function ChatSystem({ unitId, unitName, isOpen, onClose, isOwner 
   useEffect(() => {
     if (!isOpen) return;
 
-    // Connect socket
-    const newSocket = io(window.location.origin);
-    setSocket(newSocket);
+    let newSocket: Socket | null = null;
+    try {
+      newSocket = io({
+        transports: ["polling", "websocket"],
+        autoConnect: true,
+        reconnectionAttempts: 3
+      });
+      setSocket(newSocket);
+    } catch (e) {
+      console.warn("Socket initialization error:", e);
+    }
 
     // If owner and a conversation is selected
     if (isOwner && selectedConversationId) {
-      // Just mock a conversation object to start loading messages
       setConversation({ id: selectedConversationId, unitId, guestId: "", guestName: "", guestPhone: "", lastMessageAt: "" });
       setHasJoined(true);
       fetch(`/api/chat/messages/${selectedConversationId}`)
-        .then(res => res.json())
-        .then(msgs => setMessages(msgs));
-      newSocket.emit("join_conversation", selectedConversationId);
+        .then(res => res.ok ? res.json() : [])
+        .then(msgs => {
+          if (Array.isArray(msgs)) setMessages(msgs);
+        })
+        .catch(err => console.warn("Failed to load chat messages:", err));
+
+      if (newSocket) {
+        newSocket.emit("join_conversation", selectedConversationId);
+      }
     }
     
     // If guest, try to load existing conversation
@@ -80,29 +93,42 @@ export default function ChatSystem({ unitId, unitName, isOpen, onClose, isOwner 
           guestPhone: localStorage.getItem("chat_guest_phone") || ""
         })
       })
-      .then(res => res.json())
+      .then(res => res.ok ? res.json() : null)
       .then(conv => {
+        if (!conv) return;
         setConversation(conv);
-        setHasJoined(!!localStorage.getItem("chat_guest_name")); // If name exists, they already joined
+        setHasJoined(!!localStorage.getItem("chat_guest_name"));
         
         // Fetch messages
         fetch(`/api/chat/messages/${conv.id}`)
-          .then(res => res.json())
-          .then(msgs => setMessages(msgs));
+          .then(res => res.ok ? res.json() : [])
+          .then(msgs => {
+            if (Array.isArray(msgs)) setMessages(msgs);
+          })
+          .catch(err => console.warn("Failed to load chat messages:", err));
 
         // Join room
-        newSocket.emit("join_conversation", conv.id);
+        if (newSocket) {
+          newSocket.emit("join_conversation", conv.id);
+        }
+      })
+      .catch(err => console.warn("Failed to start chat session:", err));
+    }
+
+    if (newSocket) {
+      newSocket.on("receive_message", (msg: Message) => {
+        setMessages(prev => [...prev, msg]);
+        newSocket?.emit("mark_read", { conversationId: msg.conversationId, sender: isOwner ? 'owner' : 'guest' });
+      });
+      newSocket.on("connect_error", (err) => {
+        console.warn("Chat socket connection notice:", err.message);
       });
     }
 
-    newSocket.on("receive_message", (msg: Message) => {
-      setMessages(prev => [...prev, msg]);
-      // Mark as read
-      newSocket.emit("mark_read", { conversationId: msg.conversationId, sender: isOwner ? 'owner' : 'guest' });
-    });
-
     return () => {
-      newSocket.disconnect();
+      if (newSocket) {
+        newSocket.disconnect();
+      }
     };
   }, [isOpen, unitId, isOwner, selectedConversationId]);
 
@@ -118,17 +144,25 @@ export default function ChatSystem({ unitId, unitName, isOpen, onClose, isOwner 
     localStorage.setItem("chat_guest_phone", guestInfo.phone);
     
     const guestId = getGuestId();
-    const res = await fetch(`/api/chat/start`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ unitId, guestId, guestName: guestInfo.name, guestPhone: guestInfo.phone })
-    });
-    const conv = await res.json();
-    setConversation(conv);
-    setHasJoined(true);
-    
-    if (socket) {
-       socket.emit("join_conversation", conv.id);
+    try {
+      const res = await fetch(`/api/chat/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ unitId, guestId, guestName: guestInfo.name, guestPhone: guestInfo.phone })
+      });
+      if (res.ok) {
+        const conv = await res.json().catch(() => null);
+        if (conv) {
+          setConversation(conv);
+          setHasJoined(true);
+          
+          if (socket) {
+             socket.emit("join_conversation", conv.id);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Error starting chat in handleJoin:", err);
     }
   };
 
@@ -206,10 +240,10 @@ export default function ChatSystem({ unitId, unitName, isOpen, onClose, isOwner 
                 هنوز پیامی ارسال نشده است. اولین پیام را بفرستید!
               </div>
             ) : (
-              messages.map((msg) => {
+              messages.map((msg, idx) => {
                 const isMe = (isOwner && msg.sender === 'owner') || (!isOwner && msg.sender === 'guest');
                 return (
-                  <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                  <div key={`${msg.id}-${idx}`} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[80%] rounded-2xl p-3 text-sm ${isMe ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white border border-gray-100 text-gray-800 rounded-bl-none shadow-sm'}`}>
                       {msg.content}
                     </div>

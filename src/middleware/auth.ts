@@ -36,7 +36,7 @@ export const requireAuth = async (
     return res.status(401).json({ error: "Unauthorized: Missing token" });
   }
 
-  // 1. Try to verify as custom OTP signed token first
+  // 1. Try to verify as custom signed token first
   const decodedCustom = verifyToken(token);
   if (decodedCustom) {
     req.user = {

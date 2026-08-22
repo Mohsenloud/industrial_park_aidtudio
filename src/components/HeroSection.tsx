@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, SlidersHorizontal, Factory, Award, ShieldCheck, Users, Package, ArrowLeft, X } from "lucide-react";
+import { CheckCircle2, Search, SlidersHorizontal, Factory, Award, ShieldCheck, Users, Package, ArrowLeft, X } from "lucide-react";
 import { CATEGORIES, Unit, Product } from "../types";
 import { motion } from "motion/react";
 
@@ -189,9 +189,9 @@ export default function HeroSection({
                         کارگاه‌ها و واحدهای صنعتی
                       </div>
                       <div className="space-y-0.5">
-                        {matchingUnits.map((unit) => (
+                        {matchingUnits.map((unit, index) => (
                           <button
-                            key={unit.id}
+                            key={`${unit.id}-${index}`}
                             onClick={() => handleSelectUnit(unit)}
                             className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-indigo-50/50 transition-colors text-right group"
                           >
@@ -200,8 +200,9 @@ export default function HeroSection({
                                 <Factory className="h-4 w-4" />
                               </div>
                               <div className="text-right">
-                                <p className="text-xs font-black text-slate-800 group-hover:text-indigo-600 transition-colors">
+                                <p className="text-xs font-black text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-1">
                                   {unit.name}
+                                  {unit.status === "approved" && <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />}
                                 </p>
                                 <p className="text-[10px] text-slate-400 truncate max-w-[250px] font-medium">
                                   {unit.address}
@@ -222,11 +223,11 @@ export default function HeroSection({
                         محصولات و کالاهای تولیدی
                       </div>
                       <div className="space-y-0.5">
-                        {matchingProducts.map((product) => {
+                        {matchingProducts.map((product, index) => {
                           const parentUnit = units.find((u) => u.id === product.unitId);
                           return (
                             <button
-                              key={product.id}
+                              key={`${product.id}-${index}`}
                               onClick={() => handleSelectProduct(product)}
                               className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-indigo-50/50 transition-colors text-right group"
                             >

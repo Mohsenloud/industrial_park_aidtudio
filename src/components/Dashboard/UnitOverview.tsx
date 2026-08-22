@@ -6,11 +6,14 @@ import {
   Smartphone, 
   Edit3, 
   Navigation, 
-  Globe,
-  Mail,
-  Info,
-  CheckCircle,
-  XCircle
+  Globe, 
+  Mail, 
+  Info, 
+  CheckCircle, 
+  CheckCircle2, 
+  XCircle,
+  Clock,
+  Lock
 } from "lucide-react";
 import { Unit, CATEGORIES } from "../../types";
 
@@ -25,32 +28,60 @@ export default function UnitOverview({ unit, onEditClick }: UnitOverviewProps) {
   return (
     <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sm:p-8 space-y-6 text-right" style={{ direction: "rtl" }}>
       {unit.status === 'pending' && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-950 p-4 rounded-2xl text-xs font-semibold leading-relaxed flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-start md:items-center gap-3">
-            <Info className="h-5 w-5 shrink-0 text-amber-600 mt-0.5 md:mt-0" />
-            <p>کارگاه شما در انتظار تایید مدیر می‌باشد. پس از بررسی، کارگاه و محصولات شما در سایت به نمایش در خواهند آمد.</p>
+        <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-5 space-y-4 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-100 text-amber-700 rounded-xl shrink-0">
+                <Clock className="h-5 w-5 animate-pulse" />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-sm text-amber-950">ثبت نام کارگاه در انتظار تایید مدیریت</h4>
+                <p className="text-xs text-amber-800 font-medium mt-0.5 leading-relaxed">
+                  اطلاعات کارگاه شما ثبت شده و در صف بررسی مدیریت است. قبل از تایید مدیر، امکان ایجاد محصول و سایر فعالیت‌ها غیرفعال می‌باشد.
+                </p>
+              </div>
+            </div>
+            <span className="self-start sm:self-auto bg-amber-200/80 border border-amber-300 text-amber-900 text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap">
+              در انتظار تایید
+            </span>
           </div>
-          <span className="bg-amber-100/80 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-lg font-bold shrink-0 self-start md:self-auto flex items-center justify-center">در انتظار تایید</span>
-        </div>
-      )}
-      
-      {unit.status === 'approved' && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-950 p-4 rounded-2xl text-xs font-semibold leading-relaxed flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-start md:items-center gap-3">
-            <CheckCircle className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5 md:mt-0" />
-            <p>کارگاه شما توسط مدیر تایید شده است و اکنون به همراه محصولات در سایت قابل مشاهده می‌باشد.</p>
+
+          {/* Workflow Steps Indicator */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-amber-200/60 text-xs">
+            <div className="flex items-center gap-2 p-2.5 bg-white/70 rounded-xl border border-amber-100">
+              <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span className="font-bold text-slate-700">۱. ثبت مشخصات کارگاه</span>
+            </div>
+            <div className="flex items-center gap-2 p-2.5 bg-amber-100/70 rounded-xl border border-amber-200 font-bold text-amber-900">
+              <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+              <span>۲. بررسی و تایید مدیر (درحال انجام)</span>
+            </div>
+            <div className="flex items-center gap-2 p-2.5 bg-white/50 rounded-xl border border-amber-100/70 text-slate-400">
+              <Lock className="h-4 w-4 text-slate-400 shrink-0" />
+              <span>۳. فعال‌سازی محصولات و فعالیت</span>
+            </div>
           </div>
-          <span className="bg-emerald-100/80 border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg font-bold shrink-0 self-start md:self-auto flex items-center justify-center">تایید شده</span>
         </div>
       )}
 
       {unit.status === 'rejected' && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-950 p-4 rounded-2xl text-xs font-semibold leading-relaxed flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-start md:items-center gap-3">
-            <XCircle className="h-5 w-5 shrink-0 text-rose-600 mt-0.5 md:mt-0" />
-            <p>متاسفانه کارگاه شما مورد تایید قرار نگرفت. لطفاً اطلاعات را ویرایش کرده یا با پشتیبانی تماس بگیرید.</p>
+        <div className="bg-rose-50 border border-rose-200 text-rose-950 p-5 rounded-2xl space-y-3 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="p-2.5 bg-rose-100 text-rose-700 rounded-xl shrink-0">
+                <XCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-sm text-rose-950">ثبت نام کارگاه رد شده است</h4>
+                <p className="text-xs text-rose-800 font-medium mt-0.5 leading-relaxed">
+                  متاسفانه مشخصات واحد صنعتی شما تایید نگردید. لطفاً اطلاعات را ویرایش کرده یا با پشتیبانی تماس بگیرید.
+                </p>
+              </div>
+            </div>
+            <span className="self-start sm:self-auto bg-rose-200/80 border border-rose-300 text-rose-900 text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap">
+              رد شده
+            </span>
           </div>
-          <span className="bg-rose-100/80 border border-rose-200 text-rose-700 px-3 py-1.5 rounded-lg font-bold shrink-0 self-start md:self-auto flex items-center justify-center">رد شده</span>
         </div>
       )}
 
@@ -64,7 +95,10 @@ export default function UnitOverview({ unit, onEditClick }: UnitOverviewProps) {
             )}
           </div>
           <div className="space-y-1">
-            <h2 className="text-xl font-extrabold text-slate-800">{unit.name}</h2>
+            <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+              {unit.name}
+              {unit.status === "approved" && <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" title="تایید شده" />}
+            </h2>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
                 {categoryName}

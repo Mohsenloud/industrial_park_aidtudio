@@ -22,17 +22,25 @@ export default function ChatManager({ unitId, unitName }: ChatManagerProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchConversations();
-    // Poll every 10 seconds for new conversations
-    const interval = setInterval(fetchConversations, 10000);
-    return () => clearInterval(interval);
+    if (unitId) {
+      fetchConversations();
+      // Poll every 10 seconds for new conversations
+      const interval = setInterval(fetchConversations, 10000);
+      return () => clearInterval(interval);
+    } else {
+      setLoading(false);
+      setConversations([]);
+    }
   }, [unitId]);
 
   const fetchConversations = async () => {
+    if (!unitId) return;
     try {
       const res = await fetch(`/api/chat/conversations/unit/${unitId}`);
-      const data = await res.json();
-      setConversations(data);
+      if (res.ok) {
+        const data = await res.json().catch(() => []);
+        setConversations(Array.isArray(data) ? data : []);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -62,9 +70,9 @@ export default function ChatManager({ unitId, unitName }: ChatManagerProps) {
           ) : conversations.length === 0 ? (
             <div className="text-center text-xs text-slate-400 p-4">هنوز گفتگویی ایجاد نشده است.</div>
           ) : (
-            conversations.map(conv => (
+            conversations.map((conv, idx) => (
               <button
-                key={conv.id}
+                key={`${conv.id}-${idx}`}
                 onClick={() => setSelectedConv(conv)}
                 className={`w-full text-right p-3 rounded-xl transition-colors cursor-pointer border ${
                   selectedConv?.id === conv.id 

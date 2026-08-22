@@ -22,7 +22,12 @@ export default function ReviewManager({ unitId }: ReviewManagerProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchReviews();
+    if (unitId) {
+      fetchReviews();
+    } else {
+      setLoading(false);
+      setReviews([]);
+    }
   }, [unitId]);
 
   const getHeaders = () => {
@@ -42,15 +47,16 @@ export default function ReviewManager({ unitId }: ReviewManagerProps) {
   };
 
   const fetchReviews = async () => {
+    if (!unitId) return;
     try {
       const res = await fetch(`/api/units/${unitId}/reviews/all`, {
         headers: getHeaders()
       });
       if (res.ok) {
-        const data = await res.json();
-        setReviews(data);
+        const data = await res.json().catch(() => []);
+        setReviews(Array.isArray(data) ? data : []);
       } else {
-        const error = await res.json();
+        const error = await res.json().catch(() => ({}));
         console.error(error);
         toast.error(error.error || "خطا در دریافت نظرات");
       }
@@ -122,8 +128,8 @@ export default function ReviewManager({ unitId }: ReviewManagerProps) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {reviews.map((rev) => (
-            <div key={rev.id} className="border border-slate-200 rounded-xl p-4 flex flex-col justify-between">
+          {reviews.map((rev, idx) => (
+            <div key={`${rev.id}-${idx}`} className="border border-slate-200 rounded-xl p-4 flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex flex-col">
