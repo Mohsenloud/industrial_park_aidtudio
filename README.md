@@ -216,33 +216,166 @@ SMS_PROVIDER="kavenegar"
 
 ---
 
-## 🛠 راهنمای نصب و راه‌اندازی
+## 🚀 راهنمای گام‌به‌گام نصب و راه‌اندازی روی سرور لینوکس (VPS) از طریق GitHub
 
-### پیش‌نیازها
-- **Node.js** نسخه 18 یا بالاتر
-- **npm** یا **yarn**
-- پایگاه داده **PostgreSQL** (یا اتصال ابری)
+این راهنما برای سیستم‌عامل‌های **Ubuntu 22.04 / 24.04 LTS** و **Debian 12** بهینه‌سازی شده است.
 
-### گام اول: دریافت پروژه و نصب وابستگی‌ها
+---
+
+### مرحله ۱: انتقال سورس پروژه به گیت‌هاب (GitHub)
+
+۱. در حساب گیت‌هاب خود یک مخزن جدید (مثلاً `industrial-park`) بسازید (میتواند Public یا Private باشد).
+۲. در سیستم خود پروژه را به گیت‌هاب متصل و ارسال کنید:
 ```bash
+git init
+git add .
+git commit -m "Initial commit for industrial park directory"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/industrial-park.git
+git push -u origin main
+```
+
+---
+
+### مرحله ۲: اتصال به سرور VPS و نصب پیش‌نیازها
+
+با ابزار SSH (یا نرم‌افزار PuTTY / Termius) وارد سرور لینوکس خود شوید:
+```bash
+ssh root@YOUR_SERVER_IP
+```
+
+دستورات زیر را برای آپدیت سرور و نصب **Node.js 22**، **Git**، **Nginx** و **PM2** اجرا کنید:
+
+```bash
+# بروزرسانی مخازن سرور
+sudo apt update && sudo apt upgrade -y
+
+# نصب ابزارهای ضروری
+sudo apt install -y curl git ufw nginx
+
+# نصب Node.js نسخه 22 (LTS)
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# نصب PM2 جهت اجرای دائمی برنامه در پس‌زمینه
+sudo npm install -g pm2
+```
+
+---
+
+### مرحله ۳: دریافت پروژه از گیت‌هاب روی سرور
+
+پوشه‌ای مناسب ایجاد کرده و مخزن خود را دریافت (Clone) نمایید:
+
+```bash
+# رفتن به دایرکتوری وب سرور
+cd /var/www
+
+# دریافت پروژه از گیت‌هاب
+git clone https://github.com/YOUR_USERNAME/industrial-park.git
+
+# ورود به پوشه پروژه
+cd industrial-park
+
+# دسترسی اجرایی به اسکریپت استقرار
+chmod +x deploy.sh
+```
+
+---
+
+### مرحله ۴: تنظیم متغیرهای محیطی (`.env`)
+
+فایل نمونه را کپی کرده و اطلاعات پایگاه‌داده و متغیرهای لازم را وارد کنید:
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+*متغیرهای مهم را مطابق تنظیمات خود تکمیل نمایید:*
+- `DATABASE_URL` (آدرس اتصال به PostgreSQL داخلی سرور یا سرویس‌های ابری مثل Neon / Supabase)
+- `ADMIN_EMAIL` (ایمیل مدیر اصلی سیستم: `manamalat@gmail.com`)
+- `JWT_SECRET` (یک رشته تصادفی و امن)
+
+برای ذخیره فایل در `nano`، کلید‌های `Ctrl + O` و سپس `Enter` و برای خروج `Ctrl + X` را بزنید.
+
+---
+
+### مرحله ۵: نصب پکیج‌ها، ساخت و اجرای برنامه با PM2
+
+دستورات زیر را اجرا کنید:
+
+```bash
+# نصب پکیج‌ها
 npm install
-```
 
-### گام دوم: اعمال تغییرات اسکیما روی دیتابیس
-```bash
+# همگام‌سازی جداول دیتابیس
 npx drizzle-kit push
-```
 
-### گام سوم: اجرای سرور توسعه (Development)
-```bash
-npm run dev
-```
-برنامه در آدرس `http://localhost:3000` در دسترس خواهد بود.
-
-### گام چهارم: ساخت نسخه تولید (Production Build)
-```bash
+# بیلد نهایی فرانت‌اند و بک‌اند
 npm run build
-npm start
+
+# اجرای برنامه با فایل کانفیگ اختصاصی PM2
+pm2 start ecosystem.config.cjs
+
+# ذخیره تنظیمات برای اجرای خودکار پس از ریستارت سرور
+pm2 save
+pm2 startup
+```
+
+---
+
+### مرحله ۶: تنظیم وب‌سرور Nginx و اتصال دامنه
+
+برای اتصال دامنه و باز شدن برنامه روی پورت استاندارد ۸۰ و ۴۴۳ (SSL):
+
+۱. فایل کانفیگ جدیدی برای Nginx بسازید:
+```bash
+sudo nano /etc/nginx/sites-available/industrialpark
+```
+
+۲. محتویات فایل `nginx.conf.example` موجود در پروژه را در آن کپی کرده و دامنه خود را به جای `your-domain.com` قرار دهید.
+
+۳. فعال‌سازی تنظیمات و ری‌استارت Nginx:
+```bash
+sudo ln -s /etc/nginx/sites-available/industrialpark /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+۴. **نصب رایگان گواهی امنیتی SSL (HTTPS)**:
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+```
+
+---
+
+### 🔄 نحوه دریافت بروزرسانی‌های جدید در آینده (فوق‌العاده آسان)
+
+هر زمان تغییری در کدها داده و به گیت‌هاب ارسال کردید، کافی است در سرور دستور زیر را اجرا کنید تا همه چیز خودکار آپدیت شود:
+
+```bash
+cd /var/www/industrial-park
+./deploy.sh
+```
+
+---
+
+## 🐳 روش دوم: اجرای فوق‌سریع با داکر (Docker Compose)
+
+اگر ترجیح می‌دهید از Docker استفاده کنید، تمامی سرویس‌ها (شامل برنامه + دیتابیس PostgreSQL) با یک دستور بالا می‌آیند:
+
+```bash
+# نصب Docker و Compose
+curl -fsSL https://get.docker.com | sh
+
+# اجرای سرویس‌ها در پس‌زمینه
+docker compose up -d --build
+
+# مشاهده لاگ‌های اجرای برنامه
+docker compose logs -f
 ```
 
 ---
