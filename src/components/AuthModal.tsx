@@ -222,12 +222,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
         try {
           const res = await customAuth.sendEmailOtp(email.trim());
           if (res.success) {
-            if (res.codeSimulated) {
-              setEmailSimulatedCode(res.codeSimulated);
-            }
+            setEmailSimulatedCode(res.isSimulator && res.codeSimulated ? res.codeSimulated : null);
             setEmailOtpStep(2);
             startEmailCountdown();
-            setSuccessMsg("کد تایید ۵ رقمی به آدرس ایمیل شما ارسال شد.");
+            setSuccessMsg(res.message || "کد تایید ۵ رقمی به آدرس ایمیل شما ارسال شد.");
           }
         } catch (err: any) {
           console.error(err);
@@ -280,12 +278,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
         try {
           const res = await customAuth.sendEmailOtp(email.trim());
           if (res.success) {
-            if (res.codeSimulated) {
-              setEmailSimulatedCode(res.codeSimulated);
-            }
+            setEmailSimulatedCode(res.isSimulator && res.codeSimulated ? res.codeSimulated : null);
             setEmailOtpStep(2);
             startEmailCountdown();
-            setSuccessMsg("کد تایید ۵ رقمی به آدرس ایمیل شما ارسال شد.");
+            setSuccessMsg(res.message || "کد تایید ۵ رقمی به آدرس ایمیل شما ارسال شد.");
           }
         } catch (err: any) {
           console.error(err);
@@ -638,19 +634,24 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                   )}
 
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-600">شماره همراه تماس (صاحب کارگاه) <span className="text-rose-500">*</span></label>
+                    <label className="text-[11px] font-bold text-slate-600 block text-right">
+                      شماره همراه تماس (صاحب کارگاه) <span className="text-rose-500">*</span>
+                    </label>
                     <div className="relative">
-                      <Phone className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                      <Phone className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" />
                       <input
                         type="tel"
                         required
                         placeholder="مثال: 09123456789"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-right font-bold"
+                        dir="ltr"
+                        className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-left font-bold placeholder:text-right placeholder:font-sans"
                       />
                     </div>
-                    <span className="text-[9px] text-slate-400 font-medium">کد تایید ورود از طریق پیامک برای این شماره فرستاده خواهد شد.</span>
+                    <span className="text-[9px] text-slate-400 font-medium block text-right">
+                      کد تایید ورود از طریق پیامک برای این شماره فرستاده خواهد شد.
+                    </span>
                   </div>
 
                   <button
@@ -675,7 +676,9 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                 /* Step 2: Verify OTP */
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
                   <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-2xl flex items-center justify-between text-xs">
-                    <span className="text-slate-600 font-bold">ارسال به شماره: <strong className="font-mono text-slate-800">{phone}</strong></span>
+                    <span className="text-slate-600 font-bold">
+                      ارسال به شماره: <strong className="font-mono text-slate-800 inline-block mx-1" dir="ltr">{phone}</strong>
+                    </span>
                     <button
                       type="button"
                       onClick={() => { setOtpStep(1); setOtpCode(""); setError(""); setSuccessMsg(""); }}
@@ -687,9 +690,11 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-600">کد تایید ۵ رقمی را وارد کنید <span className="text-rose-500">*</span></label>
+                    <label className="text-[11px] font-bold text-slate-600 block text-right">
+                      کد تایید ۵ رقمی را وارد کنید <span className="text-rose-500">*</span>
+                    </label>
                     <div className="relative">
-                      <ShieldCheck className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                      <ShieldCheck className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" />
                       <input
                         type="text"
                         required
@@ -697,7 +702,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                         placeholder="ـ ـ ـ ـ ـ"
                         value={otpCode}
                         onChange={(e) => setOtpCode(e.target.value)}
-                        className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-sm font-black tracking-[0.5em] outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono animate-pulse"
+                        dir="ltr"
+                        className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-sm font-black tracking-[0.6em] outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono"
                       />
                     </div>
                   </div>
@@ -720,14 +726,18 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                         </button>
                       </div>
                       <p className="leading-relaxed">
-                        کد تایید شما: <strong className="font-mono text-xs bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300">{simulatedCode}</strong> می‌باشد.
+                        کد تایید شما: <strong className="font-mono text-xs bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300 inline-block mx-1" dir="ltr">{simulatedCode}</strong> می‌باشد.
                       </p>
                     </div>
                   )}
 
                   <div className="flex items-center justify-between text-[10px] text-slate-500 font-bold">
                     {countdown > 0 ? (
-                      <span>ارسال مجدد کد تایید تا {countdown} ثانیه دیگر</span>
+                      <span className="flex items-center gap-1">
+                        <span>ارسال مجدد کد تایید تا</span>
+                        <span className="font-mono font-black text-indigo-600" dir="ltr">{countdown}</span>
+                        <span>ثانیه دیگر</span>
+                      </span>
                     ) : (
                       <button
                         type="button"
@@ -766,32 +776,38 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                     <>
                       {/* Full name */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-600">نام و نام خانوادگی مدیر کارگاه <span className="text-rose-500">*</span></label>
+                        <label className="text-[11px] font-bold text-slate-600 block text-right">
+                          نام و نام خانوادگی مدیر کارگاه <span className="text-rose-500">*</span>
+                        </label>
                         <div className="relative">
-                          <User className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                          <User className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" />
                           <input
                             type="text"
                             required
-                            placeholder="مانند: علیرضا محمدی"
+                            placeholder="مانند: مهندس علیرضا محمدی"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-semibold"
+                            dir="rtl"
+                            className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-semibold text-right"
                           />
                         </div>
                       </div>
 
                       {/* Phone */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-600">شماره همراه تماس <span className="text-rose-500">*</span></label>
+                        <label className="text-[11px] font-bold text-slate-600 block text-right">
+                          شماره همراه تماس <span className="text-rose-500">*</span>
+                        </label>
                         <div className="relative">
-                          <Phone className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                          <Phone className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" />
                           <input
                             type="tel"
                             required
-                            placeholder="مانند: 09123456789"
+                            placeholder="مثال: 09123456789"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
-                            className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-right font-semibold"
+                            dir="ltr"
+                            className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-left font-bold placeholder:text-right placeholder:font-sans"
                           />
                         </div>
                       </div>
@@ -800,16 +816,19 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
 
                   {/* Email */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-600">آدرس ایمیل <span className="text-rose-500">*</span></label>
+                    <label className="text-[11px] font-bold text-slate-600 block text-right">
+                      آدرس ایمیل <span className="text-rose-500">*</span>
+                    </label>
                     <div className="relative">
-                      <Mail className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                      <Mail className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" />
                       <input
                         type="email"
                         required
                         placeholder="name@example.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-right"
+                        dir="ltr"
+                        className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-left font-medium placeholder:text-right placeholder:font-sans"
                       />
                     </div>
                   </div>
@@ -818,7 +837,9 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                   {mode !== "forgot" && (
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold text-slate-600">کلمه عبور <span className="text-rose-500">*</span></label>
+                        <label className="text-[11px] font-bold text-slate-600 block text-right">
+                          کلمه عبور <span className="text-rose-500">*</span>
+                        </label>
                         {mode === "signin" && (
                           <button
                             type="button"
@@ -836,11 +857,11 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                         )}
                       </div>
                       <div className="relative">
-                        <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                        <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer z-10"
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -851,7 +872,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                           placeholder="حداقل ۶ کاراکتر"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-right"
+                          dir="ltr"
+                          className="w-full pr-10 pl-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-left font-medium placeholder:text-right placeholder:font-sans"
                         />
                       </div>
                     </div>
@@ -882,7 +904,9 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                 <>
                   {/* Step 2: Email OTP Verification Input */}
                   <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-2xl flex items-center justify-between text-xs">
-                    <span className="text-slate-600 font-bold">ارسال به ایمیل: <strong className="font-mono text-slate-800">{email}</strong></span>
+                    <span className="text-slate-600 font-bold">
+                      ارسال به ایمیل: <strong className="font-mono text-slate-800 inline-block mx-1" dir="ltr">{email}</strong>
+                    </span>
                     <button
                       type="button"
                       onClick={() => { setEmailOtpStep(1); setEmailOtpCode(""); setError(""); setSuccessMsg(""); }}
@@ -894,9 +918,11 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-600">کد تایید ۵ رقمی ارسال شده به ایمیل را وارد کنید <span className="text-rose-500">*</span></label>
+                    <label className="text-[11px] font-bold text-slate-600 block text-right">
+                      کد تایید ۵ رقمی ارسال شده به ایمیل را وارد کنید <span className="text-rose-500">*</span>
+                    </label>
                     <div className="relative">
-                      <ShieldCheck className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                      <ShieldCheck className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" />
                       <input
                         type="text"
                         required
@@ -904,7 +930,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                         placeholder="ـ ـ ـ ـ ـ"
                         value={emailOtpCode}
                         onChange={(e) => setEmailOtpCode(e.target.value)}
-                        className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-sm font-black tracking-[0.5em] outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono"
+                        dir="ltr"
+                        className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-sm font-black tracking-[0.6em] outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono"
                       />
                     </div>
                   </div>
@@ -912,13 +939,15 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                   {/* If mode is forgot, ask for new password in step 2 */}
                   {mode === "forgot" && (
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-600">کلمه عبور جدید <span className="text-rose-500">*</span></label>
+                      <label className="text-[11px] font-bold text-slate-600 block text-right">
+                        کلمه عبور جدید <span className="text-rose-500">*</span>
+                      </label>
                       <div className="relative">
-                        <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                        <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer z-10"
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -929,7 +958,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                           placeholder="حداقل ۶ کاراکتر"
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
-                          className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-right"
+                          dir="ltr"
+                          className="w-full pr-10 pl-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono text-left font-medium placeholder:text-right placeholder:font-sans"
                         />
                       </div>
                     </div>
@@ -953,14 +983,18 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                         </button>
                       </div>
                       <p className="leading-relaxed">
-                        کد تایید شما: <strong className="font-mono text-xs bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300">{emailSimulatedCode}</strong> می‌باشد.
+                        کد تایید شما: <strong className="font-mono text-xs bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300 inline-block mx-1" dir="ltr">{emailSimulatedCode}</strong> می‌باشد.
                       </p>
                     </div>
                   )}
 
                   <div className="flex items-center justify-between text-[10px] text-slate-500 font-bold">
                     {emailCountdown > 0 ? (
-                      <span>ارسال مجدد کد تایید تا {emailCountdown} ثانیه دیگر</span>
+                      <span className="flex items-center gap-1">
+                        <span>ارسال مجدد کد تایید تا</span>
+                        <span className="font-mono font-black text-indigo-600" dir="ltr">{emailCountdown}</span>
+                        <span>ثانیه دیگر</span>
+                      </span>
                     ) : (
                       <button
                         type="button"
@@ -971,11 +1005,9 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                           try {
                             const res = await customAuth.sendEmailOtp(email.trim());
                             if (res.success) {
-                              if (res.codeSimulated) {
-                                setEmailSimulatedCode(res.codeSimulated);
-                              }
+                              setEmailSimulatedCode(res.isSimulator && res.codeSimulated ? res.codeSimulated : null);
                               startEmailCountdown();
-                              setSuccessMsg("کد تایید جدید به ایمیل شما ارسال شد.");
+                              setSuccessMsg(res.message || "کد تایید جدید به ایمیل شما ارسال شد.");
                             }
                           } catch (err: any) {
                             setError(err.message || "خطا در ارسال مجدد کد تایید.");

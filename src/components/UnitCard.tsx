@@ -2,6 +2,7 @@ import React from "react";
 import { Unit, CATEGORIES } from "../types";
 import { Phone, MapPin, ChevronLeft, Factory, Star, CheckCircle2 } from "lucide-react";
 import { motion } from "motion/react";
+import BadgePill from "./BadgePill";
 
 interface UnitCardProps {
   key?: any;
@@ -61,6 +62,20 @@ export default function UnitCard({ unit, onSelect }: UnitCardProps) {
               </div>
             ) : null}
           </div>
+
+          {/* Official Verification Badges */}
+          {unit.badges && unit.badges.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2.5">
+              {unit.badges.slice(0, 2).map((b, bIdx) => (
+                <BadgePill key={`${unit.id}-badge-${b}-${bIdx}`} badgeId={b} size="xs" />
+              ))}
+              {unit.badges.length > 2 && (
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                  +{unit.badges.length - 2}
+                </span>
+              )}
+            </div>
+          )}
           
           <p className="text-xs text-slate-500 font-normal line-clamp-2 leading-relaxed mb-4">
             {unit.description || "این واحد تولیدی هنوز توضیحی برای کارگاه خود ثبت نکرده است."}
@@ -89,3 +104,4 @@ export default function UnitCard({ unit, onSelect }: UnitCardProps) {
     </motion.div>
   );
 }
+

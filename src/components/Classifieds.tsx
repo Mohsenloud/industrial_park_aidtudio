@@ -15,7 +15,8 @@ import {
   DollarSign, 
   Info,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
+  Wrench
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { CustomUser } from "../lib/customAuth";
@@ -30,6 +31,7 @@ interface ClassifiedsProps {
   profile: UserProfile | null;
   isAdmin: boolean;
   onOpenAuth: () => void;
+  onSwitchToCapacities?: () => void;
 }
 
 const CLASSIFIED_CATEGORIES = {
@@ -60,7 +62,13 @@ const CLASSIFIED_CATEGORIES = {
   ]
 };
 
-export default function Classifieds({ user, profile, isAdmin, onOpenAuth }: ClassifiedsProps) {
+export default function Classifieds({ 
+  user, 
+  profile, 
+  isAdmin, 
+  onOpenAuth,
+  onSwitchToCapacities 
+}: ClassifiedsProps) {
   const [ads, setAds] = useState<ClassifiedAd[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<"all" | "job" | "real_estate" | "classified">("all");
@@ -112,7 +120,7 @@ export default function Classifieds({ user, profile, isAdmin, onOpenAuth }: Clas
       setLoading(true);
       const res = await fetch("/api/classifieds");
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => []);
         // Sort descending by creation date
         const sorted = (data || []).sort(
           (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -120,7 +128,7 @@ export default function Classifieds({ user, profile, isAdmin, onOpenAuth }: Clas
         setAds(sorted);
       }
     } catch (err) {
-      console.error("Error fetching classifieds:", err);
+      console.warn("Error fetching classifieds:", err);
     } finally {
       setLoading(false);
     }
@@ -133,18 +141,18 @@ export default function Classifieds({ user, profile, isAdmin, onOpenAuth }: Clas
     setUploadError("");
     setImageUploading(true);
 
-    const MAX_SIZE = 1024 * 1024; // 1 MB
+    const MAX_SIZE = 15 * 1024 * 1024; // 15 MB
     if (file.size > MAX_SIZE) {
-      setUploadError("حجم فایل انتخاب شده بیش از حد مجاز (۱ مگابایت) است.");
-      toast.error("حجم تصویر آگهی نباید بیشتر از ۱ مگابایت باشد.");
+      setUploadError("حجم فایل انتخاب شده بیش از حد مجاز (۱۵ مگابایت) است.");
+      toast.error("حجم تصویر آگهی نباید بیشتر از ۱۵ مگابایت باشد.");
       setImageUploading(false);
       if (e.target) e.target.value = "";
       return;
     }
 
     try {
-      // Compress image client-side first
-      const compressedFile = await compressImage(file);
+      // Compress image client-side before upload
+      const compressedFile = await compressImage(file, 0.4, 1200);
       const reader = new FileReader();
       reader.readAsDataURL(compressedFile);
       reader.onload = async () => {
@@ -157,19 +165,22 @@ export default function Classifieds({ user, profile, isAdmin, onOpenAuth }: Clas
           const data = await response.json();
           if (response.ok && data.url) {
             setImage(data.url);
+            toast.success("تصویر آگهی با موفقیت بارگذاری شد.");
           } else {
             throw new Error(data.error || "آپلود ناموفق بود");
           }
         } catch (innerErr: any) {
           console.error(innerErr);
-          setUploadError("خطا در ذخیره‌سازی تصویر در سرور.");
+          setUploadError(innerErr.message || "خطا در ذخیره‌سازی تصویر در سرور.");
+          toast.error("خطا در آپلود تصویر.");
         } finally {
           setImageUploading(false);
         }
       };
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       setUploadError("خطا در پردازش و خواندن فایل تصویر.");
+      toast.error("خطا در پردازش فایل تصویر.");
       setImageUploading(false);
     }
   };
@@ -293,6 +304,28 @@ export default function Classifieds({ user, profile, isAdmin, onOpenAuth }: Clas
 
   return (
     <div className="space-y-6 text-right" style={{ direction: "rtl" }}>
+      {/* Sub-Navigation Tabs between Classifieds & Services Marketplace */}
+      {onSwitchToCapacities && (
+        <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl max-w-md">
+          <button
+            type="button"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-black bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200/60 dark:border-slate-700 cursor-default"
+          >
+            <Briefcase className="h-4 w-4" />
+            <span>استخدام و نیازمندی‌ها</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onSwitchToCapacities}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/60 transition-all cursor-pointer"
+          >
+            <Wrench className="h-4 w-4 text-amber-500" />
+            <span>بازارگاه خدمات و ظرفیت‌ها</span>
+          </button>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sm:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div className="space-y-2">
@@ -648,7 +681,7 @@ export default function Classifieds({ user, profile, isAdmin, onOpenAuth }: Clas
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all cursor-pointer font-semibold"
                     >
                       {CLASSIFIED_CATEGORIES[type].map((cat, index) => (
-                        <option key={index} value={cat}>
+                        <option key={`classified-cat-${type}-${cat}-${index}`} value={cat}>
                           {cat}
                         </option>
                       ))}

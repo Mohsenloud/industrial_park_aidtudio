@@ -17,6 +17,8 @@ import QuotesList from "./QuotesList";
 import PasswordSettings from "./PasswordSettings";
 import ChatManager from "./ChatManager";
 import ReviewManager from "./ReviewManager";
+import CapacityManager from "./CapacityManager";
+import { Wrench } from "lucide-react";
 
 interface DashboardProps {
   user: CustomUser;
@@ -33,15 +35,34 @@ export default function Dashboard({ user, profile, isAdmin = false, adminSelecte
   const [isEditingUnit, setIsEditingUnit] = useState(false);
 
   // Dashboard Tabs
-  const [activeTab, setActiveTab] = useState<"overview" | "products" | "quotes" | "chats" | "reviews" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "products" | "capacities" | "quotes" | "chats" | "reviews" | "settings">(() => {
+    try {
+      const savedTab = localStorage.getItem("custom_dashboard_tab");
+      const validTabs = ["overview", "products", "capacities", "quotes", "chats", "reviews", "settings"];
+      if (savedTab && validTabs.includes(savedTab)) {
+        return savedTab as any;
+      }
+    } catch (_) {}
+    return "overview";
+  });
 
   useEffect(() => {
-    const handleTabChange = (e: any) => setActiveTab(e.detail);
+    const handleTabChange = (e: any) => {
+      if (e?.detail) {
+        setActiveTab(e.detail);
+        try {
+          localStorage.setItem("custom_dashboard_tab", e.detail);
+        } catch (_) {}
+      }
+    };
     window.addEventListener('changeDashboardTab', handleTabChange);
     return () => window.removeEventListener('changeDashboardTab', handleTabChange);
   }, []);
 
   useEffect(() => {
+    try {
+      localStorage.setItem("custom_dashboard_tab", activeTab);
+    } catch (_) {}
     window.dispatchEvent(new CustomEvent('changeDashboardTab', { detail: activeTab }));
   }, [activeTab]);
 
@@ -92,6 +113,7 @@ export default function Dashboard({ user, profile, isAdmin = false, adminSelecte
   const tabs = [
     { id: "overview", label: "اطلاعات کارگاه", icon: LayoutDashboard },
     { id: "products", label: "محصولات", icon: Package },
+    { id: "capacities", label: "ظرفیت‌های خالی", icon: Wrench },
     { id: "quotes", label: "استعلام‌ها", icon: FileText },
     { id: "chats", label: "پیام‌ها", icon: MessageSquare },
     { id: "reviews", label: "نظرات", icon: Star },
@@ -196,6 +218,15 @@ export default function Dashboard({ user, profile, isAdmin = false, adminSelecte
                       products={products}
                       productsLoading={productsLoading}
                       onRefreshProducts={fetchUnitAndProducts}
+                    />
+                  </div>
+                )}
+
+                {activeTab === "capacities" && (
+                  <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sm:p-8">
+                    <CapacityManager
+                      user={user}
+                      userUnits={unit ? [unit] : []}
                     />
                   </div>
                 )}

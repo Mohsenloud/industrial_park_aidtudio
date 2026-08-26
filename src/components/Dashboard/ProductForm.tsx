@@ -39,10 +39,10 @@ export default function ProductForm({
     setUploadError("");
     setProductImageUploading(true);
 
-    const MAX_SIZE = 1024 * 1024; // 1 MB
+    const MAX_SIZE = 15 * 1024 * 1024; // 15 MB
     if (file.size > MAX_SIZE) {
-      setUploadError("حجم فایل انتخاب شده بیش از حد مجاز (۱ مگابایت) است.");
-      toast.error("حجم تصویر محصول نباید بیشتر از ۱ مگابایت باشد.");
+      setUploadError("حجم فایل انتخاب شده بیش از حد مجاز (۱۵ مگابایت) است.");
+      toast.error("حجم تصویر محصول نباید بیشتر از ۱۵ مگابایت باشد.");
       setProductImageUploading(false);
       if (e.target) e.target.value = "";
       return;
@@ -50,7 +50,7 @@ export default function ProductForm({
 
     try {
       // Compress image client-side first
-      const compressedFile = await compressImage(file);
+      const compressedFile = await compressImage(file, 0.4, 1200);
       const reader = new FileReader();
       reader.readAsDataURL(compressedFile);
       reader.onload = async () => {
@@ -63,19 +63,22 @@ export default function ProductForm({
           const data = await response.json();
           if (response.ok && data.url) {
             setProdImage(data.url);
+            toast.success("تصویر محصول با موفقیت بارگذاری شد.");
           } else {
             throw new Error(data.error || "آپلود ناموفق بود");
           }
         } catch (innerErr: any) {
           console.error(innerErr);
-          setUploadError("خطا در ذخیره‌سازی تصویر در سرور.");
+          setUploadError(innerErr.message || "خطا در ذخیره‌سازی تصویر در سرور.");
+          toast.error("خطا در آپلود تصویر.");
         } finally {
           setProductImageUploading(false);
         }
       };
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       setUploadError("خطا در پردازش و خواندن فایل تصویر.");
+      toast.error("خطا در پردازش فایل تصویر.");
       setProductImageUploading(false);
     }
   };

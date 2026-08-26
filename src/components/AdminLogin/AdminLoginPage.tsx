@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ShieldCheck, Lock, User, ArrowRight, Eye, EyeOff, AlertCircle, CheckCircle2, Sparkles, KeyRound, Server } from "lucide-react";
+import { ShieldCheck, Lock, User, ArrowRight, Eye, EyeOff, AlertCircle, CheckCircle2, KeyRound, Server } from "lucide-react";
 import { motion } from "motion/react";
 import { customAuth } from "../../lib/customAuth";
 
@@ -17,16 +17,24 @@ export default function AdminLoginPage({ onLoginSuccess, onNavigateHome }: Admin
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Quick fill helper for administrator convenience
-  const handleQuickFill = (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
-    setError(null);
+  const normalizeDigits = (str: string): string => {
+    if (!str) return "";
+    const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+    const arabicDigits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+    let result = str;
+    for (let i = 0; i < 10; i++) {
+      result = result.replace(new RegExp(persianDigits[i], "g"), i.toString());
+      result = result.replace(new RegExp(arabicDigits[i], "g"), i.toString());
+    }
+    return result;
   };
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !password.trim()) {
+    const cleanUser = username.trim();
+    const cleanPass = password.trim();
+
+    if (!cleanUser || !cleanPass) {
       setError("لطفاً نام کاربری و کلمه عبور مدیریت را وارد نمایید.");
       return;
     }
@@ -42,13 +50,15 @@ export default function AdminLoginPage({ onLoginSuccess, onNavigateHome }: Admin
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username: username.trim(),
-          password: password.trim(),
+          username: normalizeDigits(cleanUser),
+          password: normalizeDigits(cleanPass),
           rememberMe
         }),
+      }).catch((netErr) => {
+        throw new Error("خطا در برقراری ارتباط با سرور. لطفاً اتصال اینترنت خود را بررسی نمایید.");
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         throw new Error(data.error || "نام کاربری یا کلمه عبور مدیریت نادرست است.");
@@ -73,7 +83,8 @@ export default function AdminLoginPage({ onLoginSuccess, onNavigateHome }: Admin
 
     } catch (err: any) {
       console.error("Admin login error:", err);
-      setError(err.message || "خطا در برقراری ارتباط با سرور امنیتی");
+      const isNetworkError = err?.message?.includes("Failed to fetch") || err?.name === "TypeError";
+      setError(isNetworkError ? "خطا در برقراری ارتباط با سرور. لطفاً مجدداً تلاش نمایید." : (err.message || "خطا در احراز هویت مدیریت"));
     } finally {
       setIsLoading(false);
     }
@@ -173,7 +184,7 @@ export default function AdminLoginPage({ onLoginSuccess, onNavigateHome }: Admin
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="admin یا manamalat@gmail.com"
                   dir="ltr"
-                  className="w-full bg-slate-950/80 border border-slate-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 text-white rounded-xl pr-10 pl-4 py-3 text-sm placeholder-slate-600 transition-all outline-none font-mono"
+                  className="w-full bg-slate-950/80 border border-slate-800 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 text-white rounded-xl pr-10 pl-4 py-3 text-sm placeholder-slate-600 transition-all outline-none font-mono text-left placeholder:text-right placeholder:font-sans"
                   required
                   autoFocus
                 />
@@ -242,38 +253,11 @@ export default function AdminLoginPage({ onLoginSuccess, onNavigateHome }: Admin
               ) : (
                 <>
                   <ShieldCheck className="h-5 w-5" />
-                  <span>ورود به پنل مدیریت ارشد</span>
+                  <span>ورود به پنل مدیریت</span>
                 </>
               )}
             </button>
           </form>
-
-          {/* Quick Access Credentials helper */}
-          <div className="mt-8 pt-5 border-t border-slate-800/80">
-            <p className="text-[11px] font-bold text-slate-400 mb-2.5 flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-              مشخصات پیش‌فرض مدیر ارشد سامانه:
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickFill("admin", "admin123")}
-                className="p-2 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-xl text-right transition-colors cursor-pointer text-[11px]"
-              >
-                <div className="text-slate-300 font-bold">حساب پیش‌فرض admin</div>
-                <div className="text-[10px] text-slate-500 font-mono mt-0.5">admin / admin123</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickFill("manamalat@gmail.com", "123456")}
-                className="p-2 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-xl text-right transition-colors cursor-pointer text-[11px]"
-              >
-                <div className="text-slate-300 font-bold">حساب مدیر ارشد</div>
-                <div className="text-[10px] text-slate-500 font-mono mt-0.5">manamalat@gmail.com</div>
-              </button>
-            </div>
-          </div>
         </motion.div>
       </main>
 

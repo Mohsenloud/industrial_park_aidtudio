@@ -78,7 +78,7 @@ export default function DatabaseSettings() {
       setIsLoading(true);
       const res = await fetch("/api/admin/settings", { headers: getHeaders() });
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => []);
         if (Array.isArray(data)) {
           const dbUrl = data.find((s: any) => s.key === "database_url")?.value || "";
           const host = data.find((s: any) => s.key === "sql_host")?.value || "";
@@ -107,7 +107,7 @@ export default function DatabaseSettings() {
       setIsTesting(true);
       const res = await fetch("/api/diagnostics/db");
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({ status: "error" }));
         setDiagnostics(data);
         if (data.status === "healthy") {
           toast.success("ارتباط با پایگاه‌داده با موفقیت برقرار است.");

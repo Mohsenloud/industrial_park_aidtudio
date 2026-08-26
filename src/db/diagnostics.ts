@@ -40,8 +40,13 @@ const REQUIRED_TABLE_COLUMNS: Record<string, string[]> = {
   otps: ["phone", "code", "expires_at"],
   units: ["id", "owner_id", "name", "phone", "address", "description", "category", "profile_image", "status", "created_at", "updated_at"],
   products: ["id", "unit_id", "owner_id", "name", "description", "image", "created_at"],
+  banners: ["id", "company_name", "title", "subtitle", "description", "image", "badge", "phone", "created_at"],
+  classifieds: ["id", "owner_id", "type", "title", "description", "phone", "category", "created_at"],
   settings: ["key", "value", "updated_at"],
   sms_logs: ["id", "phone", "code", "provider", "template", "status", "timestamp"],
+  quotes: ["id", "product_id", "unit_id", "buyer_name", "buyer_phone", "description", "status", "created_at"],
+  reviews: ["id", "unit_id", "author_name", "rating", "comment", "status", "created_at"],
+  activity_logs: ["id", "action", "title", "created_at"]
 };
 
 export async function runDatabaseDiagnostics(): Promise<DatabaseDiagnosticReport> {

@@ -95,22 +95,34 @@ export default function IndustrialAds() {
 
   // Load banners from database
   useEffect(() => {
-    fetch("/api/banners")
-      .then(async (res) => {
-        if (!res.ok) return [];
-        return res.json().catch(() => []);
-      })
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          // Filter only active banners and sort by priority
-          const activeOnly = data.filter(b => b.status !== 'inactive');
-          if (activeOnly.length > 0) {
-            setBannersList(activeOnly);
+    let isMounted = true;
+    const loadBanners = async () => {
+      try {
+        const res = await fetch("/api/banners");
+        if (res.ok) {
+          const data = await res.json().catch(() => []);
+          if (isMounted && Array.isArray(data) && data.length > 0) {
+            const activeOnly = data.filter((b: BannerAd) => b.status !== "inactive");
+            if (activeOnly.length > 0) {
+              setBannersList(activeOnly);
+            }
           }
         }
-      })
-      .catch((err) => console.error("Error fetching banners:", err))
-      .finally(() => setLoading(false));
+      } catch (err) {
+        // Fallback silently to default pre-loaded banners
+        console.warn("Using default banner ads:", err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadBanners();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Auto scroll slides
@@ -172,7 +184,7 @@ export default function IndustrialAds() {
       {loading ? (
         <BannerSkeleton />
       ) : (
-        <div className="relative min-h-[175px] sm:h-48 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 group shadow-md">
+        <div className="relative min-h-[185px] sm:h-52 md:h-56 bg-slate-950 rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-800/90 group shadow-lg">
           <AnimatePresence mode="wait">
             {bannersList[currentSlide] && (() => {
               const ad = bannersList[currentSlide];
@@ -181,8 +193,8 @@ export default function IndustrialAds() {
               const overlayClass = ad.overlayOpacity === 'light' 
                 ? 'via-slate-950/20' 
                 : ad.overlayOpacity === 'heavy' 
-                ? 'via-slate-950/80' 
-                : 'via-slate-950/45';
+                ? 'via-slate-950/85' 
+                : 'via-slate-950/50';
 
               return (
                 <motion.div
@@ -197,29 +209,29 @@ export default function IndustrialAds() {
                   <div className={`absolute inset-0 bg-gradient-to-r ${themeClass} z-10 opacity-95 pointer-events-none`} />
 
                   {/* Visual Image Background / Left side */}
-                  <div className="relative w-1/3 sm:w-2/5 h-full overflow-hidden shrink-0 z-10">
-                    <div className={`absolute inset-0 bg-gradient-to-r from-slate-950 ${overlayClass} to-transparent z-10`} />
+                  <div className="relative w-2/5 sm:w-5/12 md:w-2/5 lg:w-1/3 h-full overflow-hidden shrink-0 z-10">
+                    <div className={`absolute inset-0 bg-gradient-to-r from-slate-950 ${overlayClass} to-transparent z-10 pointer-events-none`} />
                     <img
                       src={ad.image}
                       alt={ad.companyName}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover transform hover:scale-105 transition-all duration-700"
+                      className="w-full h-full object-cover object-center transform hover:scale-105 transition-transform duration-700"
                       loading="lazy"
                     />
                   </div>
 
                   {/* Info Text Right side */}
-                  <div className="w-2/3 sm:w-3/5 p-3 sm:p-5 flex flex-col justify-between z-20 text-right text-white relative">
-                    <div className="space-y-1">
+                  <div className="w-3/5 sm:w-7/12 md:w-3/5 lg:w-2/3 p-3.5 sm:p-5 md:p-6 flex flex-col justify-between z-20 text-right text-white relative">
+                    <div className="space-y-1.5">
                       <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span className={`text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded border ${badgeStyle.bg} ${badgeStyle.text} ${badgeStyle.border}`}>
+                        <span className={`text-[9px] sm:text-[10px] font-bold px-2.5 py-0.5 rounded-md border ${badgeStyle.bg} ${badgeStyle.text} ${badgeStyle.border}`}>
                           {ad.badge}
                         </span>
                         <div className="flex items-center gap-1.5">
                           {ad.logo && (
                             <img src={ad.logo} alt="Logo" className="h-4 w-4 rounded object-contain bg-white/10" />
                           )}
-                          <span className="text-[10px] sm:text-xs text-slate-300 font-bold truncate max-w-[130px] sm:max-w-none">
+                          <span className="text-[10px] sm:text-xs text-slate-300 font-bold truncate max-w-[120px] sm:max-w-none">
                             {ad.companyName}
                           </span>
                         </div>
@@ -230,7 +242,7 @@ export default function IndustrialAds() {
                         )}
                       </div>
 
-                      <h4 className="text-xs sm:text-sm font-black text-white leading-snug line-clamp-1 sm:line-clamp-2">
+                      <h4 className="text-xs sm:text-sm md:text-base font-black text-white leading-snug line-clamp-1 sm:line-clamp-2">
                         {ad.title}
                       </h4>
 
@@ -239,7 +251,7 @@ export default function IndustrialAds() {
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between pt-1.5 sm:pt-2 border-t border-slate-800 gap-2">
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 gap-2">
                       <div className="flex items-center gap-2 text-[9px] sm:text-[10px] text-slate-300 truncate">
                         <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-400 shrink-0" />
@@ -272,7 +284,7 @@ export default function IndustrialAds() {
                         )}
                         <button
                           onClick={() => setActivePromoAd(ad)}
-                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[9px] sm:text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+                          className="px-2.5 py-1 bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-[9px] sm:text-[10px] font-bold rounded-lg transition-all cursor-pointer border border-slate-700/60"
                         >
                           جزئیات
                         </button>
@@ -302,9 +314,9 @@ export default function IndustrialAds() {
 
           {/* Slide Indicator Dots */}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 z-30">
-            {bannersList.map((_, idx) => (
+            {bannersList.map((banner, idx) => (
               <button
-                key={idx}
+                key={`banner-dot-${banner.id || 'slide'}-${idx}`}
                 onClick={() => setCurrentSlide(idx)}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
                   idx === currentSlide ? "w-4 bg-indigo-500" : "w-1.5 bg-slate-700"

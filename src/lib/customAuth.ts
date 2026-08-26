@@ -11,6 +11,10 @@ export interface CustomUser {
   phone?: string;
   email?: string;
   token?: string;
+  isAdmin?: boolean;
+  isSuperAdmin?: boolean;
+  role?: string;
+  permissions?: string[];
 }
 
 export interface AuthErrorDetails {
@@ -32,6 +36,18 @@ export class CustomAuthError extends Error {
     this.details = details;
     this.rawResponse = rawResponse;
   }
+}
+
+export function normalizeDigits(str: string): string {
+  if (!str) return "";
+  const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+  const arabicDigits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+  let result = str;
+  for (let i = 0; i < 10; i++) {
+    result = result.replace(new RegExp(persianDigits[i], "g"), i.toString());
+    result = result.replace(new RegExp(arabicDigits[i], "g"), i.toString());
+  }
+  return result;
 }
 
 type AuthStateCallback = (user: CustomUser | null) => void;
@@ -85,10 +101,14 @@ class CustomAuthService {
   }
 
   async signIn(email: string, password?: string, code?: string): Promise<{ requireOtp?: boolean; user?: CustomUser; codeSimulated?: string; message?: string }> {
+    const cleanEmail = normalizeDigits(email.trim()).toLowerCase();
+    const cleanPassword = password ? normalizeDigits(password.trim()) : undefined;
+    const cleanCode = code ? normalizeDigits(code.trim()) : undefined;
+
     const res = await executeAuthFetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim().toLowerCase(), password, code })
+      body: JSON.stringify({ email: cleanEmail, password: cleanPassword, code: cleanCode })
     });
 
     const data = await res.json().catch(() => ({}));
@@ -112,15 +132,20 @@ class CustomAuthService {
   }
 
   async signUp(email: string, password?: string, name?: string, phone?: string, code?: string): Promise<CustomUser> {
+    const cleanEmail = normalizeDigits(email.trim()).toLowerCase();
+    const cleanPassword = password ? normalizeDigits(password.trim()) : undefined;
+    const cleanPhone = phone ? normalizeDigits(phone.trim()) : undefined;
+    const cleanCode = code ? normalizeDigits(code.trim()) : undefined;
+
     const res = await executeAuthFetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        password,
+        email: cleanEmail,
+        password: cleanPassword,
         name: name?.trim(),
-        phone: phone?.trim(),
-        code: code?.trim()
+        phone: cleanPhone,
+        code: cleanCode
       })
     });
 
@@ -146,13 +171,17 @@ class CustomAuthService {
   }
 
   async resetPassword(email: string, code: string, newPassword?: string): Promise<CustomUser> {
+    const cleanEmail = normalizeDigits(email.trim()).toLowerCase();
+    const cleanCode = normalizeDigits(code.trim());
+    const cleanPass = newPassword ? normalizeDigits(newPassword.trim()) : undefined;
+
     const res = await executeAuthFetch("/api/auth/reset-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        code: code.trim(),
-        newPassword
+        email: cleanEmail,
+        code: cleanCode,
+        newPassword: cleanPass
       })
     });
 
@@ -177,11 +206,12 @@ class CustomAuthService {
     throw new CustomAuthError("اطلاعات کاربر پس از ثبت کلمه عبور دریافت نشد.", "INVALID_RESPONSE");
   }
 
-  async sendEmailOtp(email: string): Promise<{ success: boolean; codeSimulated?: string; message?: string }> {
+  async sendEmailOtp(email: string): Promise<{ success: boolean; isSimulator?: boolean; codeSimulated?: string; message?: string }> {
+    const cleanEmail = normalizeDigits(email.trim()).toLowerCase();
     const res = await executeAuthFetch("/api/auth/send-email-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim().toLowerCase() })
+      body: JSON.stringify({ email: cleanEmail })
     });
 
     const data = await res.json().catch(() => ({}));
@@ -199,10 +229,11 @@ class CustomAuthService {
   }
 
   async sendOtp(phone: string): Promise<{ success: boolean; codeSimulated?: string; message?: string }> {
+    const cleanPhone = normalizeDigits(phone.trim());
     const res = await executeAuthFetch("/api/auth/send-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: phone.trim() })
+      body: JSON.stringify({ phone: cleanPhone })
     });
 
     const data = await res.json().catch(() => ({}));
@@ -220,12 +251,14 @@ class CustomAuthService {
   }
 
   async verifyOtp(phone: string, code: string, name?: string): Promise<CustomUser> {
+    const cleanPhone = normalizeDigits(phone.trim());
+    const cleanCode = normalizeDigits(code.trim());
     const res = await executeAuthFetch("/api/auth/verify-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        phone: phone.trim(),
-        code: code.trim(),
+        phone: cleanPhone,
+        code: cleanCode,
         name: name?.trim()
       })
     });

@@ -59,7 +59,7 @@ export function UnitGridSkeleton({ count = 6 }: { count?: number }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {Array.from({ length: count }).map((_, idx) => (
-        <UnitCardSkeleton key={idx} />
+        <UnitCardSkeleton key={`unit-skel-${idx}`} />
       ))}
     </div>
   );
@@ -98,7 +98,7 @@ export function ProductGridSkeleton({ count = 3 }: { count?: number }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {Array.from({ length: count }).map((_, idx) => (
-        <ProductCardSkeleton key={idx} />
+        <ProductCardSkeleton key={`prod-skel-${idx}`} />
       ))}
     </div>
   );
@@ -168,7 +168,7 @@ export function ClassifiedGridSkeleton({ count = 3 }: { count?: number }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {Array.from({ length: count }).map((_, idx) => (
-        <ClassifiedAdSkeleton key={idx} />
+        <ClassifiedAdSkeleton key={`class-skel-${idx}`} />
       ))}
     </div>
   );
@@ -177,7 +177,7 @@ export function ClassifiedGridSkeleton({ count = 3 }: { count?: number }) {
 // 4. Banner Slide Skeleton
 export function BannerSkeleton() {
   return (
-    <div className="w-full relative h-44 sm:h-48 bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-md p-6 sm:p-8 flex items-center justify-between">
+    <div className="w-full relative min-h-[185px] sm:h-52 md:h-56 bg-slate-900 rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-800 shadow-md p-6 sm:p-8 flex items-center justify-between">
       <div className="space-y-4 max-w-lg flex-1">
         {/* Company and badge */}
         <div className="flex items-center gap-2">
@@ -194,8 +194,8 @@ export function BannerSkeleton() {
       </div>
 
       {/* Image Placeholder right side */}
-      <div className="hidden sm:block w-40 h-full rounded-xl overflow-hidden mr-6">
-        <div className="animate-pulse bg-slate-800 h-full w-full rounded-xl" />
+      <div className="hidden sm:block w-48 h-full rounded-2xl overflow-hidden mr-6">
+        <div className="animate-pulse bg-slate-800 h-full w-full rounded-2xl" />
       </div>
     </div>
   );

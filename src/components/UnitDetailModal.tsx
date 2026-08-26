@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ProductGridSkeleton } from "./Skeleton";
 import toast from "react-hot-toast";
 import { formatPrice } from "../lib/helpers";
-import ChatSystem from "./ChatSystem";
+import BadgePill from "./BadgePill";
 
 interface UnitDetailModalProps {
   unit: Unit | null;
@@ -30,7 +30,6 @@ export default function UnitDetailModal({ unit, onClose, onUnitChange }: UnitDet
   const [quoteDesc, setQuoteDesc] = useState("");
   const [sendingQuote, setSendingQuote] = useState(false);
   const [quoteSuccess, setQuoteSuccess] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Quick Share States
   const [copied, setCopied] = useState(false);
@@ -179,7 +178,7 @@ export default function UnitDetailModal({ unit, onClose, onUnitChange }: UnitDet
         setQuantity("");
         setQuoteDesc("");
       } else {
-        const errData = await res.json();
+        const errData = await res.json().catch(() => ({}));
         toast.error(errData.error || "خطا در ارسال استعلام.");
       }
     } catch (err) {
@@ -295,11 +294,17 @@ export default function UnitDetailModal({ unit, onClose, onUnitChange }: UnitDet
                 <h2 className="text-xl sm:text-2xl font-black text-slate-800 leading-tight">
                   {unit.name}
                 </h2>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-100 text-indigo-800 mt-1.5 border border-indigo-200">
-                  <Tag className="h-3 w-3" />
-                  {categoryObj?.name || "صنایع تولیدی"}
-                </span>
+                <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                    <Tag className="h-3 w-3" />
+                    {categoryObj?.name || "صنایع تولیدی"}
+                  </span>
+                  {unit.badges && unit.badges.map((b, bIdx) => (
+                    <BadgePill key={`${unit.id}-badge-${b}-${bIdx}`} badgeId={b} size="sm" showLabel />
+                  ))}
+                </div>
               </div>
+
             </div>
             
             <button
@@ -504,15 +509,6 @@ export default function UnitDetailModal({ unit, onClose, onUnitChange }: UnitDet
                         <span>مسیریابی و لوکیشن کارگاه</span>
                       </a>
                     )}
-
-                    {/* Chat Button */}
-                    <button
-                      onClick={() => setIsChatOpen(true)}
-                      className="w-full flex items-center justify-center gap-2 p-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all duration-200 text-xs font-bold shadow-md shadow-emerald-100 cursor-pointer mt-1"
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                      <span>گفتگوی آنلاین با کارگاه</span>
-                    </button>
                   </div>
                 </div>
 
@@ -524,13 +520,6 @@ export default function UnitDetailModal({ unit, onClose, onUnitChange }: UnitDet
                 </div>
               </div>
             </div>
-            
-            <ChatSystem 
-              unitId={unit.id} 
-              unitName={unit.name} 
-              isOpen={isChatOpen} 
-              onClose={() => setIsChatOpen(false)} 
-            />
 
             {/* Products Catalog section */}
             <div className="space-y-4 pt-4 border-t border-slate-100">

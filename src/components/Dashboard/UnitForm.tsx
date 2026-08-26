@@ -64,18 +64,18 @@ export default function UnitForm({
     setUploadError("");
     setLogoUploading(true);
 
-    const MAX_SIZE = 200 * 1024; // 200 KB
+    const MAX_SIZE = 15 * 1024 * 1024; // 15 MB
     if (file.size > MAX_SIZE) {
-      setUploadError("حجم فایل انتخاب شده بیش از حد مجاز (۲۰۰ کیلوبایت) است.");
-      toast.error("حجم تصویر لوگو/پروفایل نباید بیشتر از ۲۰۰ کیلوبایت باشد.");
+      setUploadError("حجم فایل انتخاب شده بیش از حد مجاز (۱۵ مگابایت) است.");
+      toast.error("حجم تصویر نباید بیشتر از ۱۵ مگابایت باشد.");
       setLogoUploading(false);
       if (e.target) e.target.value = "";
       return;
     }
 
     try {
-      // Compress image client-side first
-      const compressedFile = await compressImage(file);
+      // Compress image client-side before upload
+      const compressedFile = await compressImage(file, 0.4, 1200);
       const reader = new FileReader();
       reader.readAsDataURL(compressedFile);
       reader.onload = async () => {
@@ -88,19 +88,22 @@ export default function UnitForm({
           const data = await response.json();
           if (response.ok && data.url) {
             setUnitProfileImage(data.url);
+            toast.success("تصویر کارگاه با موفقیت بارگذاری شد.");
           } else {
             throw new Error(data.error || "آپلود ناموفق بود");
           }
         } catch (innerErr: any) {
           console.error(innerErr);
-          setUploadError("خطا در ذخیره‌سازی تصویر در سرور.");
+          setUploadError(innerErr.message || "خطا در ذخیره‌سازی تصویر در سرور.");
+          toast.error("خطا در آپلود تصویر.");
         } finally {
           setLogoUploading(false);
         }
       };
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setUploadError("خطا در پردازش و خواندن فایل تصویر.");
+      setUploadError("خطا در پردازش و بهینه‌سازی فایل تصویر.");
+      toast.error("خطا در پردازش فایل تصویر.");
       setLogoUploading(false);
     }
   };

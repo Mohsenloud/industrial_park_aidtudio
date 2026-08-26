@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Unit, CATEGORIES, ActivityLog } from "../../types";
+import { Unit, CATEGORIES, ActivityLog, OFFICIAL_BADGES } from "../../types";
+import BadgePill from "../BadgePill";
 import { 
   X, 
   User, 
@@ -39,7 +40,8 @@ import {
   Filter,
   CheckCircle,
   AlertTriangle,
-  Monitor
+  Monitor,
+  Award
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -49,6 +51,7 @@ interface UnitUserDetailsModalProps {
   onManage: (unitId: string) => void;
   onToggleStatus: (unitId: string, currentStatus: string) => void;
   onDelete: (unit: Unit) => void;
+  onEdit?: (unit: Unit) => void;
 }
 
 export default function UnitUserDetailsModal({
@@ -56,7 +59,8 @@ export default function UnitUserDetailsModal({
   onClose,
   onManage,
   onToggleStatus,
-  onDelete
+  onDelete,
+  onEdit
 }: UnitUserDetailsModalProps) {
   const [activeTab, setActiveTab] = useState<"details" | "activity">("details");
   const [copiedUid, setCopiedUid] = useState(false);
@@ -73,6 +77,39 @@ export default function UnitUserDetailsModal({
   const [noteDescription, setNoteDescription] = useState("");
   const [noteCategory, setNoteCategory] = useState("تماس تلفنی و پیگیری");
   const [submittingNote, setSubmittingNote] = useState(false);
+
+  // Verified Badges state
+  const [unitBadges, setUnitBadges] = useState<string[]>(unit.badges || []);
+  const [savingBadges, setSavingBadges] = useState(false);
+
+  const handleToggleBadge = async (badgeId: string) => {
+    const nextBadges = unitBadges.includes(badgeId)
+      ? unitBadges.filter(b => b !== badgeId)
+      : [...unitBadges, badgeId];
+    
+    setUnitBadges(nextBadges);
+    setSavingBadges(true);
+    try {
+      const res = await fetch(`/api/admin/units/${unit.id}/badges`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({ badges: nextBadges })
+      });
+      if (res.ok) {
+        toast.success("نشان‌های تاییدیه کارگاه به‌روزرسانی شدند.");
+        unit.badges = nextBadges;
+      } else {
+        toast.error("خطا در به‌روزرسانی نشان‌ها");
+      }
+    } catch (e) {
+      toast.error("خطا در برقراری ارتباط با سرور");
+    } finally {
+      setSavingBadges(false);
+    }
+  };
 
   const categoryName = CATEGORIES.find(c => c.id === unit.category)?.name || unit.category;
 
@@ -144,7 +181,7 @@ export default function UnitUserDetailsModal({
         credentials: "include"
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         setLogs(data.logs || []);
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -188,7 +225,7 @@ export default function UnitUserDetailsModal({
       });
 
       if (res.ok) {
-        const result = await res.json();
+        const result = await res.json().catch(() => ({}));
         toast.success(result.message || "یادداشت نظارتی با موفقیت ثبت شد.");
         setNoteTitle("");
         setNoteDescription("");
@@ -207,8 +244,6 @@ export default function UnitUserDetailsModal({
 
   // Handle Delete a Log
   const handleDeleteLog = async (logId: string) => {
-    if (!confirm("آیا از حذف این لاگ اطمینان دارید؟")) return;
-
     try {
       const headers = getAuthHeaders();
       const res = await fetch(`/api/admin/activity-logs/${logId}`, {
@@ -306,8 +341,8 @@ export default function UnitUserDetailsModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto" style={{ direction: "rtl" }}>
       <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-4 sm:my-8 max-h-[92vh] flex flex-col animate-in fade-in zoom-in duration-200">
         
-        {/* Header */}
-        <div className="bg-gradient-to-l from-slate-900 via-slate-800 to-indigo-950 p-5 sm:p-6 text-white flex items-center justify-between relative shadow-sm">
+        {/* Modal Header */}
+        <div className="bg-gradient-to-l from-slate-900 via-indigo-950 to-slate-900 p-5 sm:p-6 text-white flex items-center justify-between relative shadow-sm border-b border-indigo-900/50">
           <div className="flex items-center gap-3.5 sm:gap-4">
             <img 
               src={unit.profileImage || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=200"} 
@@ -317,60 +352,66 @@ export default function UnitUserDetailsModal({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-lg sm:text-xl font-black">{unit.name}</h3>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
                   unit.status === 'approved' 
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
                     : unit.status === 'rejected'
-                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                    : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                 }`}>
-                  {unit.status === 'approved' ? 'تایید شده' : unit.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
+                  {unit.status === 'approved' ? 'تایید و منتشر شده' : unit.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
                 </span>
               </div>
-              <p className="text-slate-300 text-xs mt-1 flex items-center gap-2 flex-wrap">
+              <p className="text-slate-300 text-xs mt-1 flex items-center gap-2 flex-wrap font-medium">
                 <Building2 className="w-3.5 h-3.5 text-indigo-400" />
                 <span>{categoryName}</span>
                 <span className="text-slate-500">•</span>
-                <span>شناسه: {unit.id}</span>
+                <span className="font-mono text-[11px]">شناسه: {unit.id}</span>
               </p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+            className="p-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-2xl transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-slate-100/90 border-b border-slate-200 px-6 pt-3 flex items-center gap-3">
-          <button
-            onClick={() => setActiveTab("details")}
-            className={`pb-3 px-3 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
-              activeTab === "details"
-                ? "border-indigo-600 text-indigo-700 bg-white/70 rounded-t-xl"
-                : "border-transparent text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <User className="w-4 h-4" />
-            <span>مشخصات و شناسنامه کارگاه</span>
-          </button>
+        <div className="bg-slate-100 border-b border-slate-200 px-6 pt-2.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveTab("details")}
+              className={`py-2.5 px-4 text-xs font-extrabold flex items-center gap-2 rounded-t-xl transition-all cursor-pointer ${
+                activeTab === "details"
+                  ? "bg-white text-indigo-700 shadow-xs border-t-2 border-indigo-600"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <User className="w-4 h-4" />
+              <span>مشخصات و شناسنامه کارگاه</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab("activity")}
-            className={`pb-3 px-3 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
-              activeTab === "activity"
-                ? "border-indigo-600 text-indigo-700 bg-white/70 rounded-t-xl"
-                : "border-transparent text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <History className="w-4 h-4" />
-            <span>لاگ و تاریخچه فعالیت‌های کاربر</span>
-            <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-800 rounded-full text-[11px] font-black font-mono">
-              {logs.length}
-            </span>
-          </button>
+            <button
+              onClick={() => setActiveTab("activity")}
+              className={`py-2.5 px-4 text-xs font-extrabold flex items-center gap-2 rounded-t-xl transition-all cursor-pointer ${
+                activeTab === "activity"
+                  ? "bg-white text-indigo-700 shadow-xs border-t-2 border-indigo-600"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <History className="w-4 h-4" />
+              <span>لاگ و تاریخچه فعالیت‌ها</span>
+              <span className="px-2 py-0.2 bg-indigo-100 text-indigo-800 rounded-full text-[10px] font-black font-mono">
+                {logs.length}
+              </span>
+            </button>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-500 pb-2">
+            <span>مالک: {owner?.name || owner?.phone || "کاربر سامانه"}</span>
+          </div>
         </div>
 
         {/* Modal Body */}
@@ -593,7 +634,64 @@ export default function UnitUserDetailsModal({
                     </div>
                   )}
 
+                  {/* Verified Industrial Badges Management */}
+                  <div className="bg-gradient-to-br from-amber-50/60 to-white p-4.5 rounded-xl border border-amber-200/70 shadow-xs space-y-3 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
+                        <Award className="h-4 w-4 text-amber-600" />
+                        نشان‌ها و بج‌های تاییدیه صنعتی (Verified Badges)
+                      </h4>
+                      <span className="text-[11px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full">
+                        {unitBadges.length} نشان فعال
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      مدیر گرامی، شما می‌توانید نشان‌های اصالت، پروانه و مدارک معتبر این واحد صنعتی را جهت نمایش در کارت واحد و صفحه اختصاصی فعال یا غیرفعال فرمایید:
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
+                      {OFFICIAL_BADGES.map((b, bIndex) => {
+                        const isSelected = unitBadges.includes(b.id);
+                        return (
+                          <button
+                            key={`official-badge-${b.id}-${bIndex}`}
+                            type="button"
+                            onClick={() => handleToggleBadge(b.id)}
+                            disabled={savingBadges}
+                            className={`p-2.5 rounded-xl text-right transition-all flex items-start justify-between gap-2 border text-xs cursor-pointer ${
+                              isSelected
+                                ? "bg-amber-50/90 border-amber-300 shadow-xs"
+                                : "bg-white border-slate-200 hover:border-slate-300 opacity-60 hover:opacity-100"
+                            }`}
+                          >
+                            <div className="space-y-0.5">
+                              <span className="font-bold text-slate-900 block">{b.name}</span>
+                              <span className="text-[10px] text-slate-500 line-clamp-1">{b.description}</span>
+                            </div>
+
+                            <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold ${
+                              isSelected ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-400"
+                            }`}>
+                              {isSelected ? "✓" : "+"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {unitBadges.length > 0 && (
+                      <div className="pt-2 border-t border-amber-100 flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-semibold text-slate-500">پیش‌نمایش در سامانه:</span>
+                        {unitBadges.map((bId, bIdx) => (
+                          <BadgePill key={`modal-badge-${bId}-${bIdx}`} badgeId={bId} size="sm" showLabel />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   {/* SEO Tags */}
+
                   {(unit.seoKeywords || unit.seoDescription) && (
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2 md:col-span-2">
                       <h4 className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
@@ -603,7 +701,7 @@ export default function UnitUserDetailsModal({
                       {unit.seoKeywords && (
                         <div className="flex flex-wrap gap-1.5">
                           {unit.seoKeywords.split(",").map((k, i) => (
-                            <span key={i} className="px-2 py-0.5 bg-white border border-slate-200 text-slate-600 rounded text-[10px] font-medium">
+                            <span key={`seo-${k.trim()}-${i}`} className="px-2 py-0.5 bg-white border border-slate-200 text-slate-600 rounded text-[10px] font-medium">
                               {k.trim()}
                             </span>
                           ))}
@@ -826,7 +924,7 @@ export default function UnitUserDetailsModal({
                     const isNewEvent = index === 0;
                     return (
                       <div 
-                        key={log.id || index}
+                        key={`modal-log-${log.id || 'entry'}-${index}`}
                         className={`relative flex items-start gap-4 p-4 rounded-2xl border transition-all duration-150 ${
                           log.action === "admin_note"
                             ? "bg-indigo-50/40 border-indigo-100 hover:bg-indigo-50/70"
@@ -931,6 +1029,19 @@ export default function UnitUserDetailsModal({
                 </>
               )}
             </button>
+            {onEdit && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onEdit(unit);
+                }}
+                className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                title="ویرایش مستقیم مشخصات و اطلاعات کارگاه"
+              >
+                <Edit3 className="h-3.5 w-3.5 text-indigo-600" />
+                <span>ویرایش مشخصات</span>
+              </button>
+            )}
             <button
               onClick={() => {
                 onClose();
@@ -938,7 +1049,6 @@ export default function UnitUserDetailsModal({
               }}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm shadow-indigo-200"
             >
-              <Edit3 className="h-3.5 w-3.5" />
               <span>ورود به مدیریت پنل کارگاه</span>
             </button>
           </div>

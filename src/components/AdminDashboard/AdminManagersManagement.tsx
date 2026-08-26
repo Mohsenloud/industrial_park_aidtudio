@@ -38,12 +38,17 @@ interface SystemManager {
   lastLoginAt?: string | null;
 }
 
-const AVAILABLE_PERMISSIONS = [
-  { id: "units", label: "مدیریت و تایید کارگاه‌ها", desc: "بررسی، تایید، ویرایش و حذف واحدهای صنعتی" },
-  { id: "banners", label: "تبلیغات و بنرها", desc: "مدیریت بنرهای تبلیغاتی و اسلایدرها" },
-  { id: "sms", label: "پیامک و اطلاع‌رسانی", desc: "مشاهده لاگ‌ها و ارسال پیامک به مدیران کارگاه‌ها" },
-  { id: "email", label: "تنظیمات ایمیل", desc: "پیکربندی سرور SMTP و قالب ایمیل‌ها" },
-  { id: "logs", label: "لاگ‌های سیستم", desc: "مشاهده گزارشات رخدادها و فعالیت کاربران" },
+export const AVAILABLE_PERMISSIONS = [
+  { id: "units", label: "مدیریت و تایید کارگاه‌ها", desc: "بررسی، تایید، ویرایش و حذف واحدهای صنعتی و مشاهده هویت کاربران" },
+  { id: "content", label: "ویرایش متون و صفحه اصلی", desc: "تغییر و مدیریت تیترها، پاراگراف‌ها و متون صفحه اول سامانه" },
+  { id: "banners", label: "تبلیغات و بنرها", desc: "مدیریت بنرهای تبلیغاتی، اسلایدرها و تبلیغات صفحه اول" },
+  { id: "sms", label: "پیامک و اطلاع‌رسانی", desc: "مشاهده لاگ‌ها، ارسال پیامک و پیکربندی درگاه پیامکی" },
+  { id: "email", label: "تنظیمات ایمیل", desc: "پیکربندی سرور SMTP و قالب ایمیل‌های اطلاع‌رسانی" },
+  { id: "database", label: "متغیرهای دیتابیس", desc: "مشاهده پارامترهای دیتابیس و وضعیت اتصالات سیستم" },
+  { id: "backup", label: "پشتیبان‌گیری و بازیابی", desc: "تهیه فایل پشتیبان و بازگردانی اطلاعات" },
+  { id: "logs", label: "لاگ‌های سیستم و خطاها", desc: "مشاهده گزارشات رخدادها و خطاهای پلتفرم" },
+  { id: "managers", label: "تعیین و مدیریت مدیران", desc: "تعریف، ویرایش و مدیریت دسترسی سایر مدیران سامانه" },
+  { id: "security", label: "تنظیمات امنیت و رمز ورود", desc: "پیکربندی امنیتی و تغییر مشخصات ورود مدیر" },
 ];
 
 export default function AdminManagersManagement() {
@@ -92,7 +97,7 @@ export default function AdminManagersManagement() {
         headers: getAuthHeaders()
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => []);
         setManagers(Array.isArray(data) ? data : []);
       }
     } catch (err) {
@@ -129,6 +134,29 @@ export default function AdminManagersManagement() {
     setFormRole(m.role || "executive_manager");
     setFormPermissions(m.permissions || ["units", "banners", "sms"]);
     setIsModalOpen(true);
+  };
+
+  const handleRoleChange = (newRole: string) => {
+    setFormRole(newRole);
+    if (newRole === "super_admin") {
+      setFormPermissions(AVAILABLE_PERMISSIONS.map(p => p.id));
+    } else if (newRole === "executive_manager") {
+      setFormPermissions(["units", "banners", "sms", "email", "logs"]);
+    } else if (newRole === "unit_moderator") {
+      setFormPermissions(["units", "logs"]);
+    } else if (newRole === "banner_manager") {
+      setFormPermissions(["banners"]);
+    } else if (newRole === "support_manager") {
+      setFormPermissions(["units", "sms", "email"]);
+    }
+  };
+
+  const handleSelectAllPermissions = () => {
+    setFormPermissions(AVAILABLE_PERMISSIONS.map(p => p.id));
+  };
+
+  const handleClearAllPermissions = () => {
+    setFormPermissions([]);
   };
 
   const togglePermission = (permId: string) => {
@@ -170,7 +198,7 @@ export default function AdminManagersManagement() {
             permissions: formPermissions
           })
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "خطا در ویرایش مدیر");
         toast.success(data.message || "اطلاعات مدیر به‌روزرسانی شد.");
       } else {
@@ -188,7 +216,7 @@ export default function AdminManagersManagement() {
             permissions: formPermissions
           })
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "خطا در تعریف مدیر جدید");
         toast.success(data.message || "مدیر جدید با موفقیت اضافه شد.");
       }
@@ -208,7 +236,7 @@ export default function AdminManagersManagement() {
         method: "POST",
         headers: getAuthHeaders()
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         toast.success(data.message || "وضعیت مدیر تغییر یافت.");
         setManagers(prev => prev.map(item => item.id === m.id ? { ...item, isActive: data.isActive } : item));
@@ -229,7 +257,7 @@ export default function AdminManagersManagement() {
         method: "DELETE",
         headers: getAuthHeaders()
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         toast.success(data.message || "مدیر با موفقیت حذف شد.");
         setManagers(prev => prev.filter(item => item.id !== m.id));
@@ -255,7 +283,7 @@ export default function AdminManagersManagement() {
         headers: getAuthHeaders(),
         body: JSON.stringify({ newPassword: newDirectPassword.trim() })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         toast.success(data.message || "کلمه عبور مدیر با موفقیت تغییر کرد.");
         setResetPassModalManager(null);
@@ -376,8 +404,8 @@ export default function AdminManagersManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredManagers.map((m) => (
-                  <tr key={m.id} className="hover:bg-slate-50/60 transition-colors">
+                {filteredManagers.map((m, mIdx) => (
+                  <tr key={`${m.id || 'mgr'}-${mIdx}`} className="hover:bg-slate-50/60 transition-colors">
                     {/* Name & Contact */}
                     <td className="py-4 px-5">
                       <div className="flex items-center gap-3">
@@ -621,22 +649,42 @@ export default function AdminManagersManagement() {
                     </label>
                     <select
                       value={formRole}
-                      onChange={(e) => setFormRole(e.target.value)}
+                      onChange={(e) => handleRoleChange(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 focus:border-rose-500 focus:bg-white text-slate-900 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm outline-none transition-all cursor-pointer font-bold"
                     >
-                      <option value="executive_manager">مدیر اجرایی سامانه</option>
+                      <option value="executive_manager">مدیر اجرایی سامانه (پیشنهادی)</option>
                       <option value="unit_moderator">ناظر و بازرس کارگاه‌ها</option>
                       <option value="banner_manager">مدیر تبلیغات و بنرها</option>
                       <option value="support_manager">مدیر پشتیبانی و پیام‌رسانی</option>
+                      <option value="super_admin">دسترسی کامل (مدیر ارشد)</option>
                     </select>
                   </div>
                 </div>
 
                 {/* Permissions selection */}
                 <div className="space-y-2 pt-2 border-t border-slate-100">
-                  <label className="block text-xs font-bold text-slate-800">
-                    دسترسی‌ها و بخش‌های مجاز برای این مدیر:
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-800">
+                      تعیین میزان دسترسی‌ها و بخش‌های مجاز ({formPermissions.length} از {AVAILABLE_PERMISSIONS.length} انتخاب شده):
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSelectAllPermissions}
+                        className="text-[11px] font-bold text-rose-600 hover:text-rose-700 cursor-pointer"
+                      >
+                        انتخاب همه
+                      </button>
+                      <span className="text-slate-300 text-xs">•</span>
+                      <button
+                        type="button"
+                        onClick={handleClearAllPermissions}
+                        className="text-[11px] font-bold text-slate-500 hover:text-slate-700 cursor-pointer"
+                      >
+                        لغو همه
+                      </button>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {AVAILABLE_PERMISSIONS.map((perm) => {
                       const isChecked = formPermissions.includes(perm.id);

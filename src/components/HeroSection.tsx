@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { CheckCircle2, Search, SlidersHorizontal, Factory, Award, ShieldCheck, Users, Package, ArrowLeft, X } from "lucide-react";
-import { CATEGORIES, Unit, Product } from "../types";
+import { CATEGORIES, Unit, Product, SiteContent, DEFAULT_SITE_CONTENT } from "../types";
 import { motion } from "motion/react";
 
 interface HeroSectionProps {
@@ -11,6 +11,7 @@ interface HeroSectionProps {
   units: Unit[];
   products: Product[];
   onSelectUnit: (unit: Unit) => void;
+  siteContent?: SiteContent;
 }
 
 export default function HeroSection({
@@ -20,8 +21,10 @@ export default function HeroSection({
   setSelectedCategory,
   units,
   products,
-  onSelectUnit
+  onSelectUnit,
+  siteContent
 }: HeroSectionProps) {
+  const content = siteContent || DEFAULT_SITE_CONTENT;
   const [showDropdown, setShowDropdown] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -95,7 +98,7 @@ export default function HeroSection({
           className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded-full text-[11px] sm:text-xs font-semibold mb-3 sm:mb-6 border border-indigo-500/20"
         >
           <Factory className="h-3 w-3" />
-          <span>مرجع رسمی صنعتگران و تولیدکنندگان شهرک صنعتی</span>
+          <span>{content.heroBadge || DEFAULT_SITE_CONTENT.heroBadge}</span>
         </motion.div>
 
         <motion.h2 
@@ -104,7 +107,7 @@ export default function HeroSection({
           transition={{ duration: 0.5, delay: 0.1 }}
           className="text-xl sm:text-3xl lg:text-5xl font-extrabold tracking-tight mb-2 sm:mb-4 text-white leading-tight"
         >
-          بانک اطلاعات و محصولات واحدهای تولیدی
+          {content.heroTitle || DEFAULT_SITE_CONTENT.heroTitle}
         </motion.h2>
 
         <motion.p 
@@ -113,7 +116,7 @@ export default function HeroSection({
           transition={{ duration: 0.5, delay: 0.2 }}
           className="text-xs sm:text-base lg:text-lg text-slate-300 max-w-2xl mx-auto mb-5 sm:mb-8 font-light leading-relaxed px-2"
         >
-          به راحتی کارگاه‌ها و محصولات فعال در شهرک صنعتی را جستجو کنید. اگر صاحب کارگاه تولیدی هستید، با ایجاد حساب کاربری رایگان، اطلاعات و محصولات خود را برای عموم معرفی کنید.
+          {content.heroSubtitle || DEFAULT_SITE_CONTENT.heroSubtitle}
         </motion.p>
 
         {/* Search Input Box with Live Dropdown */}
@@ -128,7 +131,7 @@ export default function HeroSection({
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4 sm:h-5 sm:w-5" />
               <input
                 type="text"
-                placeholder="جستجوی نام کارگاه، خدمات یا محصولات..."
+                placeholder={content.heroSearchPlaceholder || DEFAULT_SITE_CONTENT.heroSearchPlaceholder}
                 value={searchQuery}
                 onFocus={() => setShowDropdown(true)}
                 onChange={(e) => {
@@ -177,7 +180,7 @@ export default function HeroSection({
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden text-right z-50 text-slate-800 max-h-[380px] overflow-y-auto"
+              className="absolute left-0 right-0 mt-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden text-right z-50 text-slate-800 dark:text-slate-100 max-h-[380px] overflow-y-auto"
               style={{ direction: "rtl" }}
             >
               {hasResults ? (
@@ -185,7 +188,7 @@ export default function HeroSection({
                   {/* Matching Units Section */}
                   {matchingUnits.length > 0 && (
                     <div className="space-y-1">
-                      <div className="px-3 py-1 text-[11px] font-black text-slate-400 uppercase tracking-wider bg-slate-50/80 rounded-lg">
+                      <div className="px-3 py-1 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider bg-slate-50/80 dark:bg-slate-800/60 rounded-lg">
                         کارگاه‌ها و واحدهای صنعتی
                       </div>
                       <div className="space-y-0.5">
@@ -193,23 +196,23 @@ export default function HeroSection({
                           <button
                             key={`${unit.id}-${index}`}
                             onClick={() => handleSelectUnit(unit)}
-                            className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-indigo-50/50 transition-colors text-right group"
+                            className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-indigo-50/50 dark:hover:bg-slate-800/60 transition-colors text-right group cursor-pointer"
                           >
                             <div className="flex items-center gap-3">
-                              <div className="h-9 w-9 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border border-indigo-100/50 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                              <div className="h-9 w-9 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-100/50 dark:border-indigo-900/50 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                                 <Factory className="h-4 w-4" />
                               </div>
                               <div className="text-right">
-                                <p className="text-xs font-black text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-1">
+                                <p className="text-xs font-black text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors flex items-center gap-1">
                                   {unit.name}
                                   {unit.status === "approved" && <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />}
                                 </p>
-                                <p className="text-[10px] text-slate-400 truncate max-w-[250px] font-medium">
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate max-w-[250px] font-medium">
                                   {unit.address}
                                 </p>
                               </div>
                             </div>
-                            <ArrowLeft className="h-4 w-4 text-slate-300 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                            <ArrowLeft className="h-4 w-4 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                           </button>
                         ))}
                       </div>
@@ -219,7 +222,7 @@ export default function HeroSection({
                   {/* Matching Products Section */}
                   {matchingProducts.length > 0 && (
                     <div className="space-y-1">
-                      <div className="px-3 py-1 text-[11px] font-black text-slate-400 uppercase tracking-wider bg-slate-50/80 rounded-lg">
+                      <div className="px-3 py-1 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider bg-slate-50/80 dark:bg-slate-800/60 rounded-lg">
                         محصولات و کالاهای تولیدی
                       </div>
                       <div className="space-y-0.5">
@@ -229,18 +232,18 @@ export default function HeroSection({
                             <button
                               key={`${product.id}-${index}`}
                               onClick={() => handleSelectProduct(product)}
-                              className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-indigo-50/50 transition-colors text-right group"
+                              className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-indigo-50/50 dark:hover:bg-slate-800/60 transition-colors text-right group cursor-pointer"
                             >
                               <div className="flex items-center gap-3">
-                                <div className="h-9 w-9 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border border-indigo-100/50 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                <div className="h-9 w-9 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-100/50 dark:border-indigo-900/50 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                                   <Package className="h-4 w-4" />
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-xs font-black text-slate-800 group-hover:text-indigo-600 transition-colors">
+                                  <p className="text-xs font-black text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                     {product.name}
                                   </p>
                                   {parentUnit && (
-                                    <p className="text-[10px] text-slate-400 font-bold">
+                                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold">
                                       تولیدکننده: {parentUnit.name}
                                     </p>
                                   )}
@@ -248,11 +251,11 @@ export default function HeroSection({
                               </div>
                               <div className="flex items-center gap-2">
                                 {product.price && (
-                                  <span className="text-[10px] font-black bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                                  <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md">
                                     {Number(product.price).toLocaleString("fa-IR")} ریال
                                   </span>
                                 )}
-                                <ArrowLeft className="h-4 w-4 text-slate-300 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                                <ArrowLeft className="h-4 w-4 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                               </div>
                             </button>
                           );
@@ -262,9 +265,9 @@ export default function HeroSection({
                   )}
                 </div>
               ) : (
-                <div className="p-6 text-center text-slate-400 text-xs">
+                <div className="p-6 text-center text-slate-400 dark:text-slate-500 text-xs">
                   هیچ کارگاه یا محصولی منطبق با "
-                  <span className="font-extrabold text-slate-600">{searchQuery}</span>" پیدا نشد.
+                  <span className="font-extrabold text-slate-600 dark:text-slate-300">{searchQuery}</span>" پیدا نشد.
                 </div>
               )}
             </motion.div>
@@ -277,19 +280,19 @@ export default function HeroSection({
             <div className="flex justify-center text-indigo-400 mb-1">
               <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <p className="text-[10px] sm:text-xs text-slate-400 font-medium">اطلاعات تأیید شده</p>
+            <p className="text-[10px] sm:text-xs text-slate-400 font-medium">{content.heroFeature1 || DEFAULT_SITE_CONTENT.heroFeature1}</p>
           </div>
           <div className="text-center">
             <div className="flex justify-center text-indigo-400 mb-1">
               <Users className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <p className="text-[10px] sm:text-xs text-slate-400 font-medium">دسترسی مستقیم</p>
+            <p className="text-[10px] sm:text-xs text-slate-400 font-medium">{content.heroFeature2 || DEFAULT_SITE_CONTENT.heroFeature2}</p>
           </div>
           <div className="text-center">
             <div className="flex justify-center text-indigo-400 mb-1">
               <Award className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <p className="text-[10px] sm:text-xs text-slate-400 font-medium">معرفی کالا و خدمات</p>
+            <p className="text-[10px] sm:text-xs text-slate-400 font-medium">{content.heroFeature3 || DEFAULT_SITE_CONTENT.heroFeature3}</p>
           </div>
         </div>
       </div>

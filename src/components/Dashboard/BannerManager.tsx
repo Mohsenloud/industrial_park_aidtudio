@@ -115,7 +115,7 @@ export default function BannerManager({ isAdmin, onClose }: BannerManagerProps) 
     try {
       const res = await fetch("/api/banners");
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => []);
         setBannersList(data || []);
       }
     } catch (err) {
@@ -214,16 +214,16 @@ export default function BannerManager({ isAdmin, onClose }: BannerManagerProps) 
     setUploadError("");
     setImageUploading(true);
 
-    const MAX_SIZE = 900 * 1024;
+    const MAX_SIZE = 15 * 1024 * 1024; // 15 MB
     if (file.size > MAX_SIZE) {
-      setUploadError("حجم تصویر بنر بیش از حد مجاز (۹۰۰ کیلوبایت) است.");
-      toast.error("حجم تصویر بنر نباید بیشتر از ۹۰۰ کیلوبایت باشد.");
+      setUploadError("حجم تصویر بنر بیش از حد مجاز (۱۵ مگابایت) است.");
+      toast.error("حجم تصویر بنر نباید بیشتر از ۱۵ مگابایت باشد.");
       setImageUploading(false);
       return;
     }
 
     try {
-      const compressedFile = await compressImage(file);
+      const compressedFile = await compressImage(file, 0.5, 1400);
       const reader = new FileReader();
       reader.readAsDataURL(compressedFile);
       reader.onload = async () => {
@@ -241,14 +241,15 @@ export default function BannerManager({ isAdmin, onClose }: BannerManagerProps) 
             throw new Error(data.error || "آپلود ناموفق بود");
           }
         } catch (innerErr: any) {
-          setUploadError("خطا در ذخیره‌سازی تصویر در سرور.");
+          setUploadError(innerErr.message || "خطا در ذخیره‌سازی تصویر در سرور.");
           toast.error("خطا در آپلود تصویر.");
         } finally {
           setImageUploading(false);
         }
       };
-    } catch (err) {
+    } catch (err: any) {
       setUploadError("خطا در پردازش فایل تصویر.");
+      toast.error("خطا در پردازش فایل تصویر.");
       setImageUploading(false);
     }
   };
@@ -260,7 +261,7 @@ export default function BannerManager({ isAdmin, onClose }: BannerManagerProps) 
 
     setLogoUploading(true);
     try {
-      const compressedFile = await compressImage(file);
+      const compressedFile = await compressImage(file, 0.4, 800);
       const reader = new FileReader();
       reader.readAsDataURL(compressedFile);
       reader.onload = async () => {
@@ -274,14 +275,17 @@ export default function BannerManager({ isAdmin, onClose }: BannerManagerProps) 
           if (response.ok && data.url) {
             setLogo(data.url);
             toast.success("لوگوی حامی با موفقیت اضافه شد.");
+          } else {
+            throw new Error(data.error || "آپلود ناموفق بود");
           }
-        } catch (innerErr) {
-          toast.error("خطا در آپلود لوگو.");
+        } catch (innerErr: any) {
+          toast.error(innerErr.message || "خطا در آپلود لوگو.");
         } finally {
           setLogoUploading(false);
         }
       };
-    } catch (err) {
+    } catch (err: any) {
+      toast.error("خطا در پردازش لوگو.");
       setLogoUploading(false);
     }
   };
@@ -338,7 +342,7 @@ export default function BannerManager({ isAdmin, onClose }: BannerManagerProps) 
         resetForm();
         fetchBanners();
       } else {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         toast.error(data.error || "خطا در ذخیره بنر.");
       }
     } catch (err) {

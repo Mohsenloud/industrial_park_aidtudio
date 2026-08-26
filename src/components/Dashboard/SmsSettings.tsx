@@ -690,7 +690,7 @@ export default function SmsSettings({ isAdmin, onClose }: SmsSettingsProps) {
                   const isSuccess = log.status?.includes("موفق") || log.status?.includes("ارسال");
                   return (
                     <div
-                      key={log.id || index}
+                      key={`sms-log-${log.id || 'entry'}-${index}`}
                       className="p-3 bg-slate-50/80 hover:bg-white border border-slate-200 rounded-2xl flex flex-col gap-2 text-right hover:shadow-md transition-all"
                     >
                       <div className="flex items-center justify-between">
