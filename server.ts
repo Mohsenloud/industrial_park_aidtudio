@@ -138,6 +138,10 @@ async function startServer() {
   const emergencyAlertsMemoryStore = new Map<string, any>();
   const capacityMemoryStore = new Map<string, any>();
 
+  // Scope flags for initial data loading
+  let emergencyAlertsLoaded = false;
+  let capacitiesLoaded = false;
+
   // Helper to load system managers
   async function getSystemManagers(): Promise<SystemManager[]> {
     let jsonStr = settingsMemoryStore.get("system_managers");
@@ -987,8 +991,6 @@ async function startServer() {
     }
   ];
 
-  let emergencyAlertsLoaded = false;
-
   async function ensureEmergencyAlertsLoaded() {
     if (emergencyAlertsLoaded) return;
     try {
@@ -1292,8 +1294,6 @@ async function startServer() {
       createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
     }
   ];
-
-  let capacitiesLoaded = false;
 
   async function ensureCapacitiesLoaded() {
     if (capacitiesLoaded) return;
