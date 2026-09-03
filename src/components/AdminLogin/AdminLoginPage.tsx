@@ -44,24 +44,29 @@ export default function AdminLoginPage({ onLoginSuccess, onNavigateHome }: Admin
       setError(null);
       setSuccessMsg(null);
 
-      const res = await fetch("/api/admin/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: normalizeDigits(cleanUser),
-          password: normalizeDigits(cleanPass),
-          rememberMe
-        }),
-      }).catch((netErr) => {
-        throw new Error("خطا در برقراری ارتباط با سرور. لطفاً اتصال اینترنت خود را بررسی نمایید.");
-      });
+      let res: Response;
+      try {
+        res = await fetch("/api/admin/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: normalizeDigits(cleanUser),
+            password: cleanPass,
+            rememberMe
+          }),
+        });
+      } catch (netErr) {
+        setError("خطا در برقراری ارتباط با سرور. لطفاً اتصال اینترنت خود را بررسی نمایید.");
+        return;
+      }
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(data.error || "نام کاربری یا کلمه عبور مدیریت نادرست است.");
+        setError(data.error || "نام کاربری یا کلمه عبور مدیریت نادرست است.");
+        return;
       }
 
       setSuccessMsg("احراز هویت مدیر با موفقیت تایید شد. در حال انتقال به پنل...");
@@ -82,9 +87,7 @@ export default function AdminLoginPage({ onLoginSuccess, onNavigateHome }: Admin
       }, 700);
 
     } catch (err: any) {
-      console.error("Admin login error:", err);
-      const isNetworkError = err?.message?.includes("Failed to fetch") || err?.name === "TypeError";
-      setError(isNetworkError ? "خطا در برقراری ارتباط با سرور. لطفاً مجدداً تلاش نمایید." : (err.message || "خطا در احراز هویت مدیریت"));
+      setError(err?.message || "خطا در احراز هویت مدیریت");
     } finally {
       setIsLoading(false);
     }

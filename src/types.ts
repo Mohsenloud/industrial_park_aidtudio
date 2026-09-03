@@ -116,6 +116,14 @@ export const CATEGORIES = [
 ];
 
 export interface SiteContent {
+  // Hero Background & Frame Styling (طراحی و پس‌زمینه کادر اصلی)
+  heroBgType?: "solid" | "gradient" | "image";
+  heroBgColor?: string;
+  heroBgGradient?: string;
+  heroBgImage?: string;
+  heroBgOverlayOpacity?: number; // 0 to 100
+  heroBorderColor?: string;
+
   // Hero Section
   heroBadge: string;
   heroTitle: string;
@@ -146,6 +154,12 @@ export interface SiteContent {
 }
 
 export const DEFAULT_SITE_CONTENT: SiteContent = {
+  heroBgType: "solid",
+  heroBgColor: "#1b2a4b",
+  heroBgGradient: "linear-gradient(135deg, #1b2a4b 0%, #0f172a 100%)",
+  heroBgImage: "",
+  heroBgOverlayOpacity: 65,
+  heroBorderColor: "#2a3d66",
   heroBadge: "مرجع رسمی صنعتگران و تولیدکنندگان شهرک صنعتی",
   heroTitle: "بانک اطلاعات و محصولات واحدهای تولیدی",
   heroSubtitle: "به راحتی کارگاه‌ها و محصولات فعال در شهرک صنعتی را جستجو کنید. اگر صاحب کارگاه تولیدی هستید، با ایجاد حساب کاربری رایگان، اطلاعات و محصولات خود را برای عموم معرفی کنید.",

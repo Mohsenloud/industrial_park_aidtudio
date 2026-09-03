@@ -84,11 +84,49 @@ export default function HeroSection({
     setShowDropdown(false);
   };
 
+  const bgType = content.heroBgType || "solid";
+  const bgColor = content.heroBgColor || "#1b2a4b";
+  const bgGradient = content.heroBgGradient || "linear-gradient(135deg, #1b2a4b 0%, #0f172a 100%)";
+  const bgImage = content.heroBgImage || "";
+  const bgOverlayOpacity = content.heroBgOverlayOpacity !== undefined ? content.heroBgOverlayOpacity : 65;
+  const borderColor = content.heroBorderColor || "#2a3d66";
+
+  const getContainerStyle = (): React.CSSProperties => {
+    const style: React.CSSProperties = {
+      backgroundColor: "#1b2a4b", // Applied explicitly as mandated by focus selector
+      borderColor: borderColor,
+    };
+
+    if (bgType === "solid") {
+      style.backgroundColor = bgColor;
+    } else if (bgType === "gradient") {
+      style.background = bgGradient;
+    } else if (bgType === "image" && bgImage) {
+      style.backgroundImage = `url(${bgImage})`;
+      style.backgroundSize = "cover";
+      style.backgroundPosition = "center";
+      style.backgroundRepeat = "no-repeat";
+    }
+
+    return style;
+  };
+
   return (
-    <div className="relative w-full bg-slate-900 text-white py-6 sm:py-12 px-3.5 sm:px-6 lg:px-8 rounded-2xl sm:rounded-3xl mb-4 sm:mb-6 shadow-xl border border-slate-800 overflow-hidden">
+    <div 
+      className="relative w-full text-white py-6 sm:py-12 px-3.5 sm:px-6 lg:px-8 rounded-2xl sm:rounded-3xl mb-4 sm:mb-6 shadow-xl border overflow-hidden transition-all duration-300"
+      style={getContainerStyle()}
+    >
+      {/* Dark overlay for background image readability */}
+      {bgType === "image" && bgImage && (
+        <div 
+          className="absolute inset-0 pointer-events-none transition-opacity"
+          style={{ backgroundColor: `rgba(15, 23, 42, ${bgOverlayOpacity / 100})` }}
+        />
+      )}
+
       {/* Background Decorative Circles */}
-      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl" />
-      <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 rounded-full bg-indigo-600/10 blur-3xl" />
+      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 rounded-full bg-indigo-600/10 blur-3xl pointer-events-none" />
 
       <div className="relative max-w-4xl mx-auto text-center">
         <motion.div 

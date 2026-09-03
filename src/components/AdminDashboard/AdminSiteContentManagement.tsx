@@ -21,11 +21,20 @@ import {
   Check,
   Globe,
   Sliders,
-  Trash2
+  Trash2,
+  Palette,
+  Image as ImageIcon,
+  Upload,
+  Paintbrush,
+  Layers,
+  Compass,
+  RefreshCw,
+  SlidersHorizontal
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "react-hot-toast";
 import { SiteContent, DEFAULT_SITE_CONTENT } from "../../types";
+import { compressImage } from "../../lib/imageCompression";
 
 interface AdminSiteContentManagementProps {
   onContentSaved?: (updatedContent: SiteContent) => void;
@@ -39,6 +48,136 @@ export default function AdminSiteContentManagement({ onContentSaved }: AdminSite
   const [showLivePreview, setShowLivePreview] = useState(true);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Background customization helpers
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [customGradStart, setCustomGradStart] = useState("#1b2a4b");
+  const [customGradEnd, setCustomGradEnd] = useState("#0f172a");
+  const [customGradAngle, setCustomGradAngle] = useState("135");
+
+  const COLOR_PRESETS = [
+    { name: "سرمه‌ای صنعتی (پیش‌فرض)", color: "#1b2a4b", border: "#2a3d66" },
+    { name: "سورمه‌ای اقیانوسی", color: "#0f172a", border: "#1e293b" },
+    { name: "خاکستری کربنی", color: "#1e293b", border: "#334155" },
+    { name: "آبی نیمه‌شب", color: "#172554", border: "#1e3a8a" },
+    { name: "یشمی تولیدی", color: "#064e3b", border: "#065f46" },
+    { name: "عنابی سازمانی", color: "#4c0519", border: "#881337" },
+    { name: "برنزی متالیک", color: "#451a03", border: "#78350f" },
+    { name: "دودی مدرن", color: "#18181b", border: "#27272a" },
+    { name: "بنفش متالورژی", color: "#3b0764", border: "#581c87" },
+  ];
+
+  const GRADIENT_PRESETS = [
+    { 
+      name: "سرمه‌ای صنعتی به کربن", 
+      gradient: "linear-gradient(135deg, #1b2a4b 0%, #0f172a 100%)",
+      border: "#2a3d66"
+    },
+    { 
+      name: "آبی اقیانوسی به لاجوردی", 
+      gradient: "linear-gradient(135deg, #0369a1 0%, #1e1b4b 100%)",
+      border: "#0284c7"
+    },
+    { 
+      name: "بنفش متالیک به سرمه‌ای", 
+      gradient: "linear-gradient(135deg, #4338ca 0%, #172554 100%)",
+      border: "#4f46e5"
+    },
+    { 
+      name: "زمردی صنعتی به زغالی", 
+      gradient: "linear-gradient(135deg, #047857 0%, #064e3b 50%, #0f172a 100%)",
+      border: "#059669"
+    },
+    { 
+      name: "مسی و برنزی متالیک", 
+      gradient: "linear-gradient(135deg, #b45309 0%, #78350f 50%, #18181b 100%)",
+      border: "#d97706"
+    },
+    { 
+      name: "یاقوتی و زرشکی متالورژی", 
+      gradient: "linear-gradient(135deg, #9f1239 0%, #4c0519 50%, #0f172a 100%)",
+      border: "#e11d48"
+    },
+    { 
+      name: "فولاد کربنی و نقره‌ای", 
+      gradient: "linear-gradient(135deg, #334155 0%, #1e293b 50%, #0f172a 100%)",
+      border: "#475569"
+    },
+    { 
+      name: "افق نارنجی به سرمه‌ای تیره", 
+      gradient: "linear-gradient(135deg, #ea580c 0%, #1e1b4b 60%, #09090b 100%)",
+      border: "#f97316"
+    }
+  ];
+
+  const SAMPLE_INDUSTRIAL_IMAGES = [
+    {
+      name: "سوله و انبار صنعتی پیشرفته",
+      url: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1600&q=80"
+    },
+    {
+      name: "خط تولید مدرن و بازوی رباتیک",
+      url: "https://images.unsplash.com/photo-1565043589221-1a6fd9ae45c7?auto=format&fit=crop&w=1600&q=80"
+    },
+    {
+      name: "کارخانه متالورژی و ساخت دقیق",
+      url: "https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?auto=format&fit=crop&w=1600&q=80"
+    },
+    {
+      name: "ماشین‌آلات مهندسی و تراشکاری",
+      url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1600&q=80"
+    }
+  ];
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("لطفاً یک فایل تصویری معتبر انتخاب کنید.");
+      return;
+    }
+
+    try {
+      setIsUploadingImage(true);
+      const compressed = await compressImage(file, 0.6, 1600);
+      const reader = new FileReader();
+      reader.readAsDataURL(compressed);
+      reader.onload = async () => {
+        try {
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ image: reader.result, fileName: file.name })
+          });
+          const data = await res.json();
+          if (res.ok && data.url) {
+            handleChange("heroBgImage", data.url);
+            handleChange("heroBgType", "image");
+            toast.success("تصویر پس‌زمینه کادر اصلی با موفقیت بارگذاری شد.");
+          } else {
+            throw new Error(data.error || "خطا در آپلود تصویر");
+          }
+        } catch (err: any) {
+          toast.error(err.message || "خطا در بارگذاری تصویر روی سرور");
+        } finally {
+          setIsUploadingImage(false);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+      };
+    } catch (err: any) {
+      setIsUploadingImage(false);
+      toast.error("خطا در فشرده‌سازی و پردازش تصویر.");
+    }
+  };
+
+  const applyCustomGradient = () => {
+    const grad = `linear-gradient(${customGradAngle}deg, ${customGradStart} 0%, ${customGradEnd} 100%)`;
+    handleChange("heroBgGradient", grad);
+    handleChange("heroBgType", "gradient");
+    toast.success("گرادیانت سفارشی با موفقیت تنظیم شد.");
+  };
 
   const getAuthHeaders = (): Record<string, string> => {
     let headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -297,6 +436,423 @@ export default function AdminSiteContentManagement({ onContentSaved }: AdminSite
                 <p className="text-xs text-slate-500 mt-1">
                   این بخش کادر بزرگ تیره در بالای صفحه اول است که بیشترین جلب توجه را دارد.
                 </p>
+              </div>
+
+              {/* Background Style Customization Panel (رنگ، عکس یا گرادیانت) */}
+              <div className="p-4 sm:p-5 bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 text-white rounded-2xl border border-indigo-900/40 shadow-md space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-3 border-b border-slate-800/80 pb-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                      <Palette className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-xs sm:text-sm text-white flex items-center gap-1.5">
+                        <span>رنگ و پس‌زمینه کادر اصلی صفحه اول</span>
+                        <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                          شخصی‌سازی زنده
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        نوع پس‌زمینه کادر اصلی را بین رنگ یکدست، گرادیانت متالیک یا تصویر انتخاب و ویرایش کنید.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Mode Selector Tabs */}
+                  <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => handleChange("heroBgType", "solid")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        (content.heroBgType || "solid") === "solid"
+                          ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/40"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      <Paintbrush className="h-3.5 w-3.5" />
+                      <span>رنگ تک</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleChange("heroBgType", "gradient")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        content.heroBgType === "gradient"
+                          ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/40"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>گرادیانت</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleChange("heroBgType", "image")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        content.heroBgType === "image"
+                          ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/40"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      <ImageIcon className="h-3.5 w-3.5" />
+                      <span>عکس پس‌زمینه</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sub-view: Mode 1 - Solid Color */}
+                {(!content.heroBgType || content.heroBgType === "solid") && (
+                  <div className="space-y-3.5 animate-fadeIn">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-slate-300">
+                        پالت رنگ‌های سازمانی و صنعتی پیشنهادی:
+                      </label>
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                        {COLOR_PRESETS.map((preset) => {
+                          const isSelected = (content.heroBgColor || "#1b2a4b") === preset.color;
+                          return (
+                            <button
+                              key={preset.color}
+                              type="button"
+                              onClick={() => {
+                                handleChange("heroBgColor", preset.color);
+                                handleChange("heroBorderColor", preset.border);
+                                handleChange("heroBgType", "solid");
+                              }}
+                              className={`p-2 rounded-xl text-right transition-all cursor-pointer border flex flex-col gap-1.5 ${
+                                isSelected
+                                  ? "bg-slate-800/90 border-indigo-500 shadow-md shadow-indigo-500/20 ring-2 ring-indigo-500/50"
+                                  : "bg-slate-950/40 border-slate-800 hover:border-slate-700 hover:bg-slate-800/40"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span 
+                                  className="w-5 h-5 rounded-lg border border-white/20 shrink-0 shadow-inner"
+                                  style={{ backgroundColor: preset.color }}
+                                />
+                                {isSelected && <Check className="h-3.5 w-3.5 text-indigo-400" />}
+                              </div>
+                              <span className="text-[10px] font-bold text-slate-300 truncate">
+                                {preset.name}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Custom Color Picker & Hex Input */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-400">
+                          رنگ پس‌زمینه اختصاصی (Color Picker / کد هگز):
+                        </label>
+                        <div className="flex items-center gap-2 bg-slate-950/70 p-1.5 rounded-xl border border-slate-800">
+                          <input
+                            type="color"
+                            value={content.heroBgColor || "#1b2a4b"}
+                            onChange={(e) => {
+                              handleChange("heroBgColor", e.target.value);
+                              handleChange("heroBgType", "solid");
+                            }}
+                            className="w-8 h-8 rounded-lg border border-slate-700 cursor-pointer bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={content.heroBgColor || "#1b2a4b"}
+                            onChange={(e) => {
+                              handleChange("heroBgColor", e.target.value);
+                              handleChange("heroBgType", "solid");
+                            }}
+                            placeholder="#1b2a4b"
+                            className="flex-1 bg-transparent text-xs font-mono text-white outline-none px-2 text-left"
+                            dir="ltr"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-400">
+                          رنگ خط حاشیه دور کادر (Border Color):
+                        </label>
+                        <div className="flex items-center gap-2 bg-slate-950/70 p-1.5 rounded-xl border border-slate-800">
+                          <input
+                            type="color"
+                            value={content.heroBorderColor || "#2a3d66"}
+                            onChange={(e) => handleChange("heroBorderColor", e.target.value)}
+                            className="w-8 h-8 rounded-lg border border-slate-700 cursor-pointer bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={content.heroBorderColor || "#2a3d66"}
+                            onChange={(e) => handleChange("heroBorderColor", e.target.value)}
+                            placeholder="#2a3d66"
+                            className="flex-1 bg-transparent text-xs font-mono text-white outline-none px-2 text-left"
+                            dir="ltr"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sub-view: Mode 2 - Gradient */}
+                {content.heroBgType === "gradient" && (
+                  <div className="space-y-3.5 animate-fadeIn">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-slate-300">
+                        گرادیانت‌های آماده صنعتی و متالیک:
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {GRADIENT_PRESETS.map((preset) => {
+                          const isSelected = content.heroBgGradient === preset.gradient;
+                          return (
+                            <button
+                              key={preset.name}
+                              type="button"
+                              onClick={() => {
+                                handleChange("heroBgGradient", preset.gradient);
+                                handleChange("heroBorderColor", preset.border);
+                                handleChange("heroBgType", "gradient");
+                              }}
+                              className={`p-2.5 rounded-xl text-right transition-all cursor-pointer border flex flex-col gap-2 ${
+                                isSelected
+                                  ? "bg-slate-800/90 border-indigo-500 shadow-md shadow-indigo-500/20 ring-2 ring-indigo-500/50"
+                                  : "bg-slate-950/40 border-slate-800 hover:border-slate-700"
+                              }`}
+                            >
+                              <div 
+                                className="w-full h-7 rounded-lg border border-white/20 shadow-inner flex items-center justify-end p-1"
+                                style={{ background: preset.gradient }}
+                              >
+                                {isSelected && <Check className="h-3.5 w-3.5 text-white drop-shadow" />}
+                              </div>
+                              <span className="text-[10px] font-bold text-slate-300 truncate">
+                                {preset.name}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Interactive Custom Gradient Builder */}
+                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                          <Compass className="h-3.5 w-3.5" />
+                          <span>گرادیانت‌ساز سفارشی (انتخاب ۲ رنگ و زاویه):</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={applyCustomGradient}
+                          className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold cursor-pointer transition-colors"
+                        >
+                          اعمال این گرادیانت
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-1">رنگ اول:</label>
+                          <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-lg border border-slate-700">
+                            <input
+                              type="color"
+                              value={customGradStart}
+                              onChange={(e) => setCustomGradStart(e.target.value)}
+                              className="w-6 h-6 rounded border-0 cursor-pointer bg-transparent"
+                            />
+                            <span className="text-[10px] font-mono text-slate-300">{customGradStart}</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-1">رنگ دوم:</label>
+                          <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-lg border border-slate-700">
+                            <input
+                              type="color"
+                              value={customGradEnd}
+                              onChange={(e) => setCustomGradEnd(e.target.value)}
+                              className="w-6 h-6 rounded border-0 cursor-pointer bg-transparent"
+                            />
+                            <span className="text-[10px] font-mono text-slate-300">{customGradEnd}</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-1">زاویه گرادیانت:</label>
+                          <select
+                            value={customGradAngle}
+                            onChange={(e) => setCustomGradAngle(e.target.value)}
+                            className="w-full h-8 px-2 bg-slate-900 border border-slate-700 rounded-lg text-[10px] font-bold text-slate-200 outline-none cursor-pointer"
+                          >
+                            <option value="45">۴۵ درجه (مورب بالا)</option>
+                            <option value="90">۹۰ درجه (افقی)</option>
+                            <option value="135">۱۳۵ درجه (مورب استاندارد)</option>
+                            <option value="180">۱۸۰ درجه (عمودی)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Direct CSS Gradient Input */}
+                      <div className="pt-2 border-t border-slate-800">
+                        <label className="text-[10px] text-slate-400 block mb-1">
+                          یا ویرایش دستی کد CSS گرادیانت:
+                        </label>
+                        <input
+                          type="text"
+                          value={content.heroBgGradient || ""}
+                          onChange={(e) => handleChange("heroBgGradient", e.target.value)}
+                          placeholder="linear-gradient(135deg, #1b2a4b 0%, #0f172a 100%)"
+                          className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-[11px] font-mono text-indigo-300 outline-none text-left"
+                          dir="ltr"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sub-view: Mode 3 - Image */}
+                {content.heroBgType === "image" && (
+                  <div className="space-y-3.5 animate-fadeIn">
+                    {/* Upload button & direct URL input */}
+                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                          <Upload className="h-3.5 w-3.5" />
+                          <span>تصویر پس‌زمینه کادر اصلی:</span>
+                        </span>
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploadingImage}
+                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+                          >
+                            {isUploadingImage ? (
+                              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Upload className="h-3.5 w-3.5" />
+                            )}
+                            <span>{isUploadingImage ? "در حال آپلود..." : "آپلود تصویر از دستگاه"}</span>
+                          </button>
+
+                          {content.heroBgImage && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleChange("heroBgImage", "");
+                                handleChange("heroBgType", "solid");
+                                toast.success("تصویر پس‌زمینه حذف و کادر به رنگ پیش‌فرض بازگشت.");
+                              }}
+                              className="px-2.5 py-1.5 bg-rose-900/60 hover:bg-rose-800/80 text-rose-200 rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                            >
+                              حذف تصویر
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Direct URL input */}
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-1">
+                          یا درج مستقیم آدرس اینترنتی تصویر (Image URL):
+                        </label>
+                        <input
+                          type="text"
+                          value={content.heroBgImage || ""}
+                          onChange={(e) => {
+                            handleChange("heroBgImage", e.target.value);
+                            handleChange("heroBgType", "image");
+                          }}
+                          placeholder="https://example.com/factory-bg.jpg"
+                          className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono text-slate-200 outline-none text-left"
+                          dir="ltr"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Industrial Image Presets */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-slate-300">
+                        تصاویر صنعتی باکیفیت و بهینه‌شده پیشنهادی:
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {SAMPLE_INDUSTRIAL_IMAGES.map((sample) => {
+                          const isSelected = content.heroBgImage === sample.url;
+                          return (
+                            <button
+                              key={sample.name}
+                              type="button"
+                              onClick={() => {
+                                handleChange("heroBgImage", sample.url);
+                                handleChange("heroBgType", "image");
+                              }}
+                              className={`p-1.5 rounded-xl text-right transition-all cursor-pointer border flex flex-col gap-1.5 relative overflow-hidden group ${
+                                isSelected
+                                  ? "bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/50 shadow-md"
+                                  : "bg-slate-950/40 border-slate-800 hover:border-slate-700"
+                              }`}
+                            >
+                              <div className="relative w-full h-14 rounded-lg overflow-hidden border border-white/10">
+                                <img
+                                  src={sample.url}
+                                  alt={sample.name}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <div className="absolute inset-0 bg-slate-950/40" />
+                                {isSelected && (
+                                  <div className="absolute top-1 right-1 w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center text-white">
+                                    <Check className="h-3 w-3" />
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-bold text-slate-300 truncate px-0.5">
+                                {sample.name}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Dark Overlay Opacity Slider */}
+                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                          <SlidersHorizontal className="h-3.5 w-3.5 text-indigo-400" />
+                          <span>روکش تیره روی تصویر جهت خوانایی متون (Dark Overlay):</span>
+                        </span>
+                        <span className="font-mono text-indigo-300 font-bold">
+                          {content.heroBgOverlayOpacity !== undefined ? content.heroBgOverlayOpacity : 65}%
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="10"
+                        max="90"
+                        step="5"
+                        value={content.heroBgOverlayOpacity !== undefined ? content.heroBgOverlayOpacity : 65}
+                        onChange={(e) => handleChange("heroBgOverlayOpacity", parseInt(e.target.value))}
+                        className="w-full accent-indigo-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                      />
+                      <div className="flex justify-between text-[10px] text-slate-500 font-medium">
+                        <span>تصویر روشن‌تر (۱۰٪)</span>
+                        <span>استاندارد (۶۵٪)</span>
+                        <span>تصویر تیره‌تر و خواناتر (۹۰٪)</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Badge Text */}
@@ -760,37 +1316,62 @@ export default function AdminSiteContentManagement({ onContentSaved }: AdminSite
                     </span>
                   </div>
 
-                  {/* Hero Mockup */}
-                  <div className="bg-slate-900 text-white p-4 rounded-2xl text-center space-y-2 border border-slate-800 shadow-md">
-                    <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded-full text-[9px] font-semibold border border-indigo-500/30">
-                      <Factory className="h-2.5 w-2.5" />
-                      <span>{content.heroBadge || DEFAULT_SITE_CONTENT.heroBadge}</span>
-                    </div>
+                  {/* Hero Mockup with Dynamic Background Styling */}
+                  <div 
+                    className="text-white p-4 rounded-2xl text-center space-y-2 border shadow-md relative overflow-hidden transition-all duration-300"
+                    style={{
+                      backgroundColor: content.heroBgType === "solid" ? (content.heroBgColor || "#1b2a4b") : "#1b2a4b",
+                      backgroundImage: content.heroBgType === "gradient" 
+                        ? (content.heroBgGradient || "linear-gradient(135deg, #1b2a4b 0%, #0f172a 100%)")
+                        : content.heroBgType === "image" && content.heroBgImage
+                        ? `url(${content.heroBgImage})`
+                        : undefined,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      borderColor: content.heroBorderColor || "#2a3d66",
+                    }}
+                  >
+                    {/* Dark Overlay Layer for background image */}
+                    {content.heroBgType === "image" && content.heroBgImage && (
+                      <div 
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          backgroundColor: `rgba(15, 23, 42, ${(content.heroBgOverlayOpacity !== undefined ? content.heroBgOverlayOpacity : 65) / 100})`
+                        }}
+                      />
+                    )}
 
-                    <h4 className="text-xs sm:text-sm font-black text-white leading-tight">
-                      {content.heroTitle || DEFAULT_SITE_CONTENT.heroTitle}
-                    </h4>
+                    <div className="relative z-10 space-y-2">
+                      <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded-full text-[9px] font-semibold border border-indigo-500/30">
+                        <Factory className="h-2.5 w-2.5" />
+                        <span>{content.heroBadge || DEFAULT_SITE_CONTENT.heroBadge}</span>
+                      </div>
 
-                    <p className="text-[10px] text-slate-300 font-light line-clamp-3 leading-relaxed px-1">
-                      {content.heroSubtitle || DEFAULT_SITE_CONTENT.heroSubtitle}
-                    </p>
+                      <h4 className="text-xs sm:text-sm font-black text-white leading-tight">
+                        {content.heroTitle || DEFAULT_SITE_CONTENT.heroTitle}
+                      </h4>
 
-                    {/* Search box Mockup */}
-                    <div className="bg-white rounded-xl p-1.5 flex items-center gap-1.5 text-slate-400 text-[10px] mt-2 text-right">
-                      <Search className="h-3 w-3 text-slate-400 shrink-0 mr-1" />
-                      <span className="text-slate-400 truncate flex-1">
-                        {content.heroSearchPlaceholder || DEFAULT_SITE_CONTENT.heroSearchPlaceholder}
-                      </span>
-                      <span className="bg-slate-100 text-slate-500 text-[9px] px-1.5 py-0.5 rounded font-bold">
-                        دسته‌بندی‌ها
-                      </span>
-                    </div>
+                      <p className="text-[10px] text-slate-300 font-light line-clamp-3 leading-relaxed px-1">
+                        {content.heroSubtitle || DEFAULT_SITE_CONTENT.heroSubtitle}
+                      </p>
 
-                    {/* Feature 3 columns */}
-                    <div className="grid grid-cols-3 gap-1 pt-2 mt-2 border-t border-slate-800/80 text-[9px] text-slate-400">
-                      <div className="truncate">{content.heroFeature1 || "اطلاعات تأیید شده"}</div>
-                      <div className="truncate">{content.heroFeature2 || "دسترسی مستقیم"}</div>
-                      <div className="truncate">{content.heroFeature3 || "معرفی کالا"}</div>
+                      {/* Search box Mockup */}
+                      <div className="bg-white rounded-xl p-1.5 flex items-center gap-1.5 text-slate-400 text-[10px] mt-2 text-right">
+                        <Search className="h-3 w-3 text-slate-400 shrink-0 mr-1" />
+                        <span className="text-slate-400 truncate flex-1">
+                          {content.heroSearchPlaceholder || DEFAULT_SITE_CONTENT.heroSearchPlaceholder}
+                        </span>
+                        <span className="bg-slate-100 text-slate-500 text-[9px] px-1.5 py-0.5 rounded font-bold">
+                          دسته‌بندی‌ها
+                        </span>
+                      </div>
+
+                      {/* Feature 3 columns */}
+                      <div className="grid grid-cols-3 gap-1 pt-2 mt-2 border-t border-slate-700/60 text-[9px] text-slate-300">
+                        <div className="truncate">{content.heroFeature1 || "اطلاعات تأیید شده"}</div>
+                        <div className="truncate">{content.heroFeature2 || "دسترسی مستقیم"}</div>
+                        <div className="truncate">{content.heroFeature3 || "معرفی کالا"}</div>
+                      </div>
                     </div>
                   </div>
 
