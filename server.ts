@@ -27,7 +27,7 @@ import {
   getClientIp, 
   logSecurityEvent 
 } from "./src/middleware/security.ts";
-import { eq, or, and, desc, sql } from "drizzle-orm";
+import { eq, or, and, desc, sql, ne } from "drizzle-orm";
 import cookieParser from "cookie-parser";
 import nodemailer from "nodemailer";
 import { createServer } from "http";
@@ -198,18 +198,16 @@ async function startServer() {
 
     const allPermissions = ["units", "content", "managers", "banners", "sms", "email", "database", "backup", "logs", "security"];
 
-    // 1. Direct Super Admin checks
+    // 1. Direct Super Admin checks (strictly verified admin token or authorized email)
     if (
       cleanUid === "usr_direct_admin" ||
-      cleanUidLower === "admin" ||
-      cleanUidLower === "superadmin" ||
-      cleanUidLower === "مدیر" ||
-      cleanUidLower === "مدیر ارشد" ||
-      cleanUidLower === configuredAdminUsername ||
-      normalizedEmail === "manamalat@gmail.com" ||
-      normalizedEmail === adminEmailEnv ||
-      normalizedEmail === configuredAdminEmail ||
-      normalizedEmail === "admin@industrialpark.ir"
+      (configuredAdminUsername && cleanUidLower === configuredAdminUsername) ||
+      (normalizedEmail && (
+        normalizedEmail === "manamalat@gmail.com" ||
+        normalizedEmail === adminEmailEnv ||
+        normalizedEmail === configuredAdminEmail ||
+        normalizedEmail === "admin@industrialpark.ir"
+      ))
     ) {
       return {
         isAdmin: true,
@@ -2894,9 +2892,11 @@ async function startServer() {
 
       const formattedMessage = templatePattern.replace("%code%", code);
       let logStatus = "شبیه‌سازی موفق";
-      let displayMessage = `کد تایید شبیه‌سازی شد: ${code}`;
+      let displayMessage = "کد تایید ارسال شد.";
 
-      if (provider !== "simulator" && apiKey) {
+      const isSimulator = provider === "simulator" || !apiKey;
+
+      if (!isSimulator) {
         try {
           const smsResult = await sendRealSMS(provider, apiKey, sender, cleanPhone, formattedMessage, code, templatePattern, endpoint);
           logStatus = smsResult.statusText;
@@ -2906,6 +2906,10 @@ async function startServer() {
         } catch (smsErr: any) {
           logStatus = `خطای فرستنده: ${smsErr.message}`;
         }
+      } else {
+        displayMessage = process.env.NODE_ENV === "production" 
+          ? "کد تایید ارسال گردید." 
+          : `کد تایید شبیه‌سازی شد: ${code}`;
       }
 
       // Add to database logs safely (non-blocking for user OTP delivery)
@@ -2924,10 +2928,13 @@ async function startServer() {
         logger.warn("SMS Log DB Insert", "Failed to save sms log to DB (non-blocking)", { error: logErr.message, phone: cleanPhone });
       }
 
+      // Only expose codeSimulated in development when provider is simulator
+      const exposeSimulatedCode = isSimulator && process.env.NODE_ENV !== "production";
+
       return res.json({
         success: true,
         message: displayMessage,
-        codeSimulated: code,
+        codeSimulated: exposeSimulatedCode ? code : undefined,
         smsEnabled: isEnabled,
         smsProvider: provider
       });
@@ -3296,81 +3303,39 @@ async function startServer() {
       let isValid = false;
       let adminProfile: any = null;
 
-      // Super Admin identities
+      // Super Admin identities (strictly configured username, email, or system defaults)
       const superAdminUsernames = [
         "admin",
-        "superadmin",
         "manamalat@gmail.com",
         "admin@industrialpark.ir",
         "09123442543",
-        "+989123442543",
-        "9123442543",
-        "مدیر",
-        "ادمین",
-        "مدیر ارشد",
-        "مدیریت",
-        "admin_user",
-        "system_admin",
         configuredAdminUsername,
-        configuredAdminEmail
+        configuredAdminEmail,
+        (process.env.ADMIN_EMAIL || "").toLowerCase().trim(),
+        (process.env.ADMIN_USERNAME || "").toLowerCase().trim()
       ].map(s => (s || "").toLowerCase().trim()).filter(Boolean);
 
       const isConfiguredSuperAdminIdentity = 
         superAdminUsernames.includes(inputUser) || 
-        superAdminUsernames.includes(normalizedUser) ||
-        inputUser.includes("manamalat") ||
-        normalizedUser.includes("manamalat") ||
-        inputUser.includes("admin") ||
-        normalizedUser.includes("admin") ||
-        inputUser === "admin" ||
-        normalizedUser === "admin" ||
-        inputUser.includes("مدیر") ||
-        normalizedUser.includes("مدیر");
+        superAdminUsernames.includes(normalizedUser);
 
-      // Allowed default/master passwords for super admin
-      const superAdminAllowedPasswords = [
-        "admin123",
-        "123456",
-        "admin",
-        "Industrial@2025",
-        "manamalat123",
-        "12345678",
-        "password",
-        "123456789",
-        "admin@2025",
-        "admin@2026",
-        "1234",
-        "123",
-        "12345",
-        "admin@123",
-        "adminadmin",
-        "root"
-      ];
+      // Initial password if not yet configured in DB (can be configured via ADMIN_PASSWORD in .env)
+      const initialDefaultPassword = process.env.ADMIN_PASSWORD || "Industrial@2025";
 
-      const isSuperAdminPasswordValid = 
-        superAdminAllowedPasswords.includes(inputPass) ||
-        superAdminAllowedPasswords.includes(normalizedPass) ||
-        (configuredAdminPassHash && verifyPassword(inputPass, configuredAdminPassHash)) ||
-        (configuredAdminPassHash && verifyPassword(normalizedPass, configuredAdminPassHash)) ||
-        configuredAdminPassHash === inputPass ||
-        configuredAdminPassHash === normalizedPass;
-
-      // 1. Super Admin Match
-      if (isConfiguredSuperAdminIdentity && isSuperAdminPasswordValid) {
-        isValid = true;
-        adminProfile = {
-          uid: "usr_direct_admin",
-          name: configuredAdminName || "مهندس علیرضا محمدی (مدیر ارشد)",
-          email: configuredAdminEmail || "manamalat@gmail.com",
-          phone: "09123442543",
-          isAdmin: true,
-          role: "super_admin",
-          permissions: ["units", "banners", "sms", "email", "database", "backup", "logs", "security", "managers"]
-        };
+      let isSuperAdminPasswordValid = false;
+      if (configuredAdminPassHash) {
+        isSuperAdminPasswordValid = 
+          verifyPassword(inputPass, configuredAdminPassHash) ||
+          verifyPassword(normalizedPass, configuredAdminPassHash);
+      } else {
+        isSuperAdminPasswordValid = 
+          inputPass === initialDefaultPassword ||
+          normalizedPass === initialDefaultPassword ||
+          verifyPassword(inputPass, initialDefaultPassword);
       }
 
-      // If user inputs ANY password matching superAdmin passwords, automatically admit as Super Admin
-      if (!isValid && (superAdminAllowedPasswords.includes(inputPass) || superAdminAllowedPasswords.includes(normalizedPass))) {
+      // 1. Super Admin Match (Strict check: MUST match both identity AND verified password)
+      if (isConfiguredSuperAdminIdentity && isSuperAdminPasswordValid) {
         isValid = true;
         adminProfile = {
           uid: "usr_direct_admin",
@@ -3409,12 +3374,10 @@ async function startServer() {
             }
 
             const isManagerPassValid = 
-              verifyPassword(inputPass, targetManager.passwordHash) || 
-              verifyPassword(normalizedPass, targetManager.passwordHash) || 
-              targetManager.passwordHash === inputPass ||
-              targetManager.passwordHash === normalizedPass ||
-              superAdminAllowedPasswords.includes(inputPass) ||
-              superAdminAllowedPasswords.includes(normalizedPass);
+              targetManager.passwordHash && (
+                verifyPassword(inputPass, targetManager.passwordHash) || 
+                verifyPassword(normalizedPass, targetManager.passwordHash)
+              );
 
             if (isManagerPassValid) {
               isValid = true;
@@ -3441,30 +3404,7 @@ async function startServer() {
         }
       }
 
-      // 3. Universal Fallback: If super admin password matches and user is an admin candidate
-      if (!isValid && (superAdminAllowedPasswords.includes(inputPass) || superAdminAllowedPasswords.includes(normalizedPass))) {
-        if (
-          inputUser === "admin" ||
-          normalizedUser === "admin" ||
-          inputUser.includes("admin") ||
-          inputUser.includes("manamalat") ||
-          normalizedUser.includes("manamalat") ||
-          inputUser.includes("مدیر")
-        ) {
-          isValid = true;
-          adminProfile = {
-            uid: "usr_direct_admin",
-            name: configuredAdminName || "مهندس علیرضا محمدی (مدیر ارشد)",
-            email: configuredAdminEmail || "manamalat@gmail.com",
-            phone: "09123442543",
-            isAdmin: true,
-            role: "super_admin",
-            permissions: ["units", "banners", "sms", "email", "database", "backup", "logs", "security", "managers"]
-          };
-        }
-      }
-
-      // 4. If not matched yet, check DB users table
+      // 3. If not matched yet, check DB users table with valid admin privileges
       if (!isValid) {
         try {
           const foundUsers = await db.select().from(users).where(
@@ -3480,11 +3420,10 @@ async function startServer() {
           if (foundUsers.length > 0) {
             const candidate = foundUsers[0];
             const candidateIsAdmin = await getIsAdmin(candidate.uid, candidate.email);
-            if (candidateIsAdmin) {
+            if (candidateIsAdmin && candidate.passwordHash) {
               if (
-                (candidate.passwordHash && (verifyPassword(inputPass, candidate.passwordHash) || verifyPassword(normalizedPass, candidate.passwordHash))) ||
-                superAdminAllowedPasswords.includes(inputPass) ||
-                superAdminAllowedPasswords.includes(normalizedPass)
+                verifyPassword(inputPass, candidate.passwordHash) || 
+                verifyPassword(normalizedPass, candidate.passwordHash)
               ) {
                 isValid = true;
                 adminProfile = {
@@ -3504,16 +3443,13 @@ async function startServer() {
         }
       }
 
-      // 5. Memory store fallback check
+      // 4. Memory store fallback check
       if (!isValid) {
         const memUser = userMemoryStore.get(inputUser) || userMemoryStore.get(normalizedUser);
         if (memUser && (memUser.isAdmin || memUser.uid === "usr_direct_admin" || memUser.role === "manager" || memUser.role === "super_admin")) {
           if (
-            !memUser.passwordHash ||
-            verifyPassword(inputPass, memUser.passwordHash) ||
-            verifyPassword(normalizedPass, memUser.passwordHash) ||
-            superAdminAllowedPasswords.includes(inputPass) ||
-            superAdminAllowedPasswords.includes(normalizedPass)
+            memUser.passwordHash &&
+            (verifyPassword(inputPass, memUser.passwordHash) || verifyPassword(normalizedPass, memUser.passwordHash))
           ) {
             isValid = true;
             adminProfile = {
@@ -5998,15 +5934,15 @@ async function startServer() {
     socket.on("mark_read", async (data) => {
        try {
          const { conversationId, sender } = data;
-         // Mark messages as read where sender is NOT the current user
-         const msgs = await db.select().from(messages)
-            .where(and(eq(messages.conversationId, conversationId), eq(messages.isRead, 'false')));
-            
-         for (const m of msgs) {
-            if (m.sender !== sender) {
-               await db.update(messages).set({ isRead: 'true' }).where(eq(messages.id, m.id));
-            }
-         }
+         if (!conversationId || !sender) return;
+         // Mark all messages as read where sender is NOT the current user in a single batch query
+         await db.update(messages)
+            .set({ isRead: 'true' })
+            .where(and(
+               eq(messages.conversationId, conversationId),
+               eq(messages.isRead, 'false'),
+               ne(messages.sender, sender)
+            ));
        } catch (err) {
          console.error("Socket error on mark_read", err);
        }
