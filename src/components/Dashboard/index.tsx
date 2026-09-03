@@ -18,6 +18,7 @@ import PasswordSettings from "./PasswordSettings";
 import ChatManager from "./ChatManager";
 import ReviewManager from "./ReviewManager";
 import CapacityManager from "./CapacityManager";
+import NotificationSettings from "./NotificationSettings";
 import { Wrench } from "lucide-react";
 
 interface DashboardProps {
@@ -247,14 +248,17 @@ export default function Dashboard({ user, profile, isAdmin = false, adminSelecte
                 )}
 
                 {activeTab === "settings" && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                    <PasswordSettings user={user} />
-                    <BackupRestore
-                      userUid={user.uid}
-                      unit={unit}
-                      products={products}
-                      onRefresh={fetchUnitAndProducts}
-                    />
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                      <PasswordSettings user={user} />
+                      <BackupRestore
+                        userUid={user.uid}
+                        unit={unit}
+                        products={products}
+                        onRefresh={fetchUnitAndProducts}
+                      />
+                    </div>
+                    <NotificationSettings userId={user.uid} />
                   </div>
                 )}
               </motion.div>

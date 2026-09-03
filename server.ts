@@ -32,6 +32,9 @@ import cookieParser from "cookie-parser";
 import nodemailer from "nodemailer";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { uploadRouter } from "./src/routes/uploadRoutes.ts";
+import { pushRouter } from "./src/routes/pushRoutes.ts";
+import { quoteRouter } from "./src/routes/quoteRoutes.ts";
 
 async function startServer() {
   const app = express();
@@ -582,6 +585,11 @@ async function startServer() {
     fs.mkdirSync(uploadDir, { recursive: true });
   }
   app.use('/uploads', express.static(uploadDir));
+
+  // Mount Modular Routes (Storage/Uploads, Web Push Notifications, Quotes/RFQ)
+  app.use("/api", uploadRouter);
+  app.use("/api", pushRouter);
+  app.use("/api", quoteRouter);
 
   // API Route to fetch SMS Logs (Admin only)
   app.get("/api/admin/sms-logs", requireAuth, async (req: AuthRequest, res) => {
@@ -2464,6 +2472,16 @@ async function startServer() {
           performed_by TEXT,
           created_at TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS push_subscriptions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT,
+          endpoint TEXT NOT NULL UNIQUE,
+          p256dh TEXT NOT NULL,
+          auth TEXT NOT NULL,
+          user_agent TEXT,
+          created_at TEXT NOT NULL
+        );
       `);
       console.log("[DB Migration] All database tables and columns ensured successfully.");
     } catch (err) {
@@ -4175,30 +4193,6 @@ async function startServer() {
     }
   });
 
-  // API Upload Route (Stores Base64 images permanently in DB & disk fallback with Magic Byte Validation)
-  app.post("/api/upload", (req, res) => {
-    try {
-      const { image } = req.body;
-      if (!image) {
-        return res.status(400).json({ error: "فایل تصویر ارسال نشده است." });
-      }
-
-      // Security check: validate Magic Bytes and prevent malicious script uploads
-      const validation = validateUploadedImage(image);
-      if (!validation.isValid) {
-        return res.status(400).json({ 
-          error: validation.error || "فایل ارسالی معتبر نبوده یا دارای ساختار مخرب است.",
-          code: "INVALID_IMAGE_PAYLOAD"
-        });
-      }
-
-      return res.json({ url: image });
-    } catch (err: any) {
-      console.error("Upload error:", err);
-      return res.status(500).json({ error: err.message || "خطا در ذخیره‌سازی تصویر" });
-    }
-  });
-
   // User Profile Endpoints
   app.get("/api/users/profile/:uid", async (req, res) => {
     try {
@@ -5631,90 +5625,6 @@ async function startServer() {
       return res.json({ success: true });
     } catch (err: any) {
       console.error("Error deleting classified:", err);
-      return res.status(500).json({ error: err.message });
-    }
-  });
-
-  // Quotes Endpoints (استعلام سریع قیمت و مشخصات فنی)
-  app.get("/api/quotes/unit/:unitId", requireAuth, async (req: AuthRequest, res) => {
-    try {
-      const { unitId } = req.params;
-      const requesterId = req.user!.uid;
-      const isAdminUser = await getIsAdmin(requesterId);
-
-      // Check if unit belongs to this user or if they are admin
-      const unitResult = await db.select().from(units).where(eq(units.id, unitId));
-      if (unitResult.length === 0) {
-        return res.status(404).json({ error: "واحد صنعتی یافت نشد." });
-      }
-      if (unitResult[0].ownerId !== requesterId && !isAdminUser) {
-        return res.status(403).json({ error: "سطح دسترسی ناکافی به استعلام‌های این واحد." });
-      }
-
-      const result = await db.select().from(quotes).where(eq(quotes.unitId, unitId));
-      return res.json(result);
-    } catch (err: any) {
-      console.error("Error fetching quotes for unit:", err);
-      return res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.post("/api/quotes", async (req, res) => {
-    try {
-      const data = req.body;
-      if (!data.productId || !data.unitId || !data.buyerName || !data.buyerPhone || !data.quantity) {
-        return res.status(400).json({ error: "ورود تمامی فیلدهای الزامی برای استعلام الزامی است." });
-      }
-
-      const newQuote = {
-        id: `qot_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-        productId: data.productId,
-        unitId: data.unitId,
-        buyerName: data.buyerName,
-        buyerPhone: data.buyerPhone,
-        quantity: data.quantity,
-        description: data.description || "",
-        status: "pending",
-        createdAt: new Date().toISOString()
-      };
-
-      const result = await db.insert(quotes).values(newQuote).returning();
-      return res.json(result[0]);
-    } catch (err: any) {
-      console.error("Error submitting quote:", err);
-      return res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.post("/api/quotes/:id/status", requireAuth, async (req: AuthRequest, res) => {
-    try {
-      const { id } = req.params;
-      const { status } = req.body;
-      const requesterId = req.user!.uid;
-      const isAdminUser = await getIsAdmin(requesterId);
-
-      const existing = await db.select().from(quotes).where(eq(quotes.id, id));
-      if (existing.length === 0) {
-        return res.status(404).json({ error: "درخواست استعلام یافت نشد." });
-      }
-
-      const unitResult = await db.select().from(units).where(eq(units.id, existing[0].unitId));
-      if (unitResult.length === 0) {
-        return res.status(404).json({ error: "واحد صنعتی متناظر یافت نشد." });
-      }
-
-      if (unitResult[0].ownerId !== requesterId && !isAdminUser) {
-        return res.status(403).json({ error: "شما مجاز به تغییر وضعیت این استعلام نیستید." });
-      }
-
-      const result = await db.update(quotes)
-        .set({ status })
-        .where(eq(quotes.id, id))
-        .returning();
-
-      return res.json(result[0]);
-    } catch (err: any) {
-      console.error("Error updating quote status:", err);
       return res.status(500).json({ error: err.message });
     }
   });
